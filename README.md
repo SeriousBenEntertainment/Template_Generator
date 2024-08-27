@@ -4,7 +4,7 @@ Template Generator.
 
 ## Local Installation
 
-Download the [Package](https://github.com/SeriousBenEntertainment/Template_Generator/archive/refs/tags/v1.0.zip) and install the needed libraries with
+Download the [Package](https://github.com/SeriousBenEntertainment/Template_Generator/archive/refs/tags/v0.1.0.zip) and install the needed libraries with
 
 ```bash
 python -m pip install --upgrade -r --force-reinstall requirements.txt
@@ -27,7 +27,7 @@ python -m streamlit run ❄️_Template_Generator.py
 
 ## Remote Deployment (Snowflake Native App Framework)
 
-Use the VS Code Snowflake Extension to deploy the Native App. [Python modules in Snowflake](https://repo.anaconda.com/pkgs/snowflake/). To install the needed snowflake-cli, use these commands
+Use the [VS Code Snowflake Extension](https://marketplace.visualstudio.com/items?itemName=snowflake.snowflake-vsc) to deploy the Native App. [Python modules in Snowflake](https://repo.anaconda.com/pkgs/snowflake/). To install the needed snowflake-cli, use these commands
 
 ```bash
 brew tap snowflakedb/snowflake-cli
