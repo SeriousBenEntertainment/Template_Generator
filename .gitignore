@@ -1,0 +1,12 @@
+snowflake.local.yml
+output/
+**/__pycache__/
+**/.pytest_cache/
+create_secret.sql
+.streamlit/secrets.toml
+.streamlit/config.toml
+data/dialogues_original.parquet
+data/dialogues.parquet
+.DS_Store
+vba_extract.py
+extract.py

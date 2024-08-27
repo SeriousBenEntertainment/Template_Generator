@@ -1,0 +1,44 @@
+##### `requirements.txt`
+##### OpenAI
+##### Open-Source, hostet on https://github.com/DrBenjamin/OpenAI
+##### Please reach out to benjamin.gross1@adesso.de for any questions
+### All needed libraries (and their versions)
+streamlit
+streamlit-scrollable-textbox
+streamlit-cropper
+streamlit-audiorec
+openai
+beautifulsoup4
+python-docx
+argparse
+#pypiwin32
+#docopt
+deepl
+pillow
+PyPDF2
+opencv-python-headless
+torch
+torchvision
+torchaudio
+langchain
+langchain-community
+langchain-openai
+langchain-cli
+diffusers
+bitsandbytes
+transformers
+accelerate
+peft
+trl
+datasets
+audio2numpy
+pydub
+python-engineio==3.13.0
+python-socketio==4.6.0
+text_generation
+tomlkit==0.13.0
+snowflake-connector-python
+#==3.11.0
+snowflake-snowpark-python
+snowflake-cli-labs
+#==2.7.0
