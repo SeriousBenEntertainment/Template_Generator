@@ -8,7 +8,7 @@ Download the [Package](https://github.com/SeriousBenEntertainment/Template_Gener
 
 ### Python Environment
 
-To create a local Python environment, use the following commands
+To create a local Python environment with [Miniconda](https://docs.anaconda.com/miniconda/), use the following commands
 
 ```bash
 conda create --name myenv python=3.10
