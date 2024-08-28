@@ -36,8 +36,11 @@ python -m streamlit run ❄️_Template_Generator.py
 Use the [VS Code Snowflake Extension](https://marketplace.visualstudio.com/items?itemName=snowflake.snowflake-vsc) to deploy the Native App in the Snowflake Badge (`Run (deploy and re-install`). [Python modules in Snowflake](https://repo.anaconda.com/pkgs/snowflake/). To install the needed snowflake-cli, use these commands
 
 ```bash
+# Mac
 brew tap snowflakedb/snowflake-cli
 brew install snowflake-cli
+
+# any other System
 python -m pip install --upgrade --force-reinstall snowflake-cli-labs
 ```
 
