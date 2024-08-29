@@ -42,3 +42,4 @@ snowflake-connector-python
 snowflake-snowpark-python
 snowflake-cli-labs
 #==2.7.0
+minio

@@ -47,3 +47,23 @@ python -m pip install --upgrade --force-reinstall snowflake-cli-labs
 ### Snowflake Native App
 
 Run the [Snowflake native app](https://app.snowflake.com/FFCJEQR/pk52190/#/apps/application/OPENAI_BENJAMINGROSS1).
+
+## Minio Data Lake
+
+[MiniO Podman](https://min.io/download?license=agpl&platform=docker)
+
+### Podman Container
+
+```bash
+# Minio Server
+podman run -p 9000:9000 -p 9001:9001 minio/minio server /data --console-address ":9001"
+
+# Minio Client
+podman run --name my-mc --hostname my-mc -it --entrypoint /bin/bash --rm minio/mc
+mc alias set myminio/ https://127.0.0.1 minioadmin minioadmin
+mc ls myminio/mybucket
+```
+
+### Web Interface
+
+[Minio Web Interface](http://127.0.0.1:9001/browser).
