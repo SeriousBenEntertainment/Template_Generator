@@ -15,6 +15,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Pt
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
+from minio import Minio
+from minio.error import S3Error
 from snowflake.snowpark import Session
 from langchain_community.chat_message_histories import StreamlitChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -29,6 +31,36 @@ pages = {
 }
 
 pg = st.navigation(pages, position="sidebar")
+
+# Establish MiniO session
+def connect_to_minio(endpoint_url, access_key, secret_key):
+    try:
+        client = Minio(endpoint_url,
+        access_key=access_key,
+        secret_key=secret_key,
+        secure=False) # Using HTTP, set to True if using HTTPS
+        return client
+    except S3Error as e:
+        st.error(f"Error: {e}")
+    return None
+
+# Function to list buckets
+def list_buckets(minio_client):
+    try:
+        buckets = minio_client.list_buckets()
+        return [bucket.name for bucket in buckets]
+    except S3Error as e:
+        st.error(f"Error: {e}")
+    return 
+
+# Function to list objects in a bucket
+def list_objects(minio_client, bucket_name):
+    try:
+        objects = minio_client.list_objects(bucket_name, recursive=True)
+        return [obj.object_name for obj in objects]
+    except S3Error as e:
+        st.error(f"Error: {e}")
+    return 
 
 # Establish Snowflake session
 @st.cache_resource
@@ -216,6 +248,29 @@ with sidebar:
 # Title
 st.title('❄️ Template Generator')
 st.write('Dieses Tool erstellt ein Template-Dokument zu einer BAS-Anzeige zum Thema Sozialdatenverarbeitung.')
+
+# Minio connection
+minio_client = connect_to_minio("192.168.178.23:9000", "minioadmin", "minioadmin")
+
+if minio_client:
+    with st.expander("MiniO Data Lake Inhalt"):
+        st.sidebar.success("Connected to MinIO")
+
+        # Display buckets
+        st.subheader("Buckets")
+        buckets = list_buckets(minio_client)
+        if buckets:
+            selected_bucket = st.selectbox("Select a bucket", buckets)
+
+            # Display objects in selected bucket
+            st.write(f"Objects in {selected_bucket}")
+            objects = list_objects(minio_client, selected_bucket)
+            for obj in objects:
+                st.write(obj)
+        else:
+            st.warning("No buckets found.")
+else:
+    st.error("Failed to connect to MinIO")
 
 # Display data table
 with st.expander("Datenbankinhalt"):
