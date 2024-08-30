@@ -56,6 +56,8 @@ Run the [Snowflake native app](https://app.snowflake.com/FFCJEQR/pk52190/#/apps/
 
 ```bash
 # Minio Server
+podman machine init
+podman machine start
 podman run -p 9000:9000 -p 9001:9001 minio/minio server /data --console-address ":9001"
 
 # Minio Client
