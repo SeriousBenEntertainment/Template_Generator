@@ -206,7 +206,7 @@ with sidebar:
     cloud = st.selectbox("Cloud:", ["AWS", "Azure", "Google Cloud"], index=2)
     service_1 = 'Google Cloud Vision'
     service_2 = 'Google Translate'
-    on = st.toggle("OpenAI ChatGPT", True)
+    on = st.toggle("OpenAI ChatGPT", False)
     if not on:
         st.markdown("Local Server Configuration")
         url = st.text_input("URL:", value="http://localhost")
