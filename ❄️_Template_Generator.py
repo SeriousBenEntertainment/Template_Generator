@@ -4,6 +4,7 @@
 ### Please reach out to benjamin.gross1@adesso.de for any questions
 ### Loading needed Python libraries
 import streamlit as st
+from streamlit_pdf_viewer import pdf_viewer
 import pandas as pd
 import sys
 import datetime
@@ -250,11 +251,11 @@ st.title('❄️ Template Generator')
 st.write('Dieses Tool erstellt ein Template-Dokument zu einer BAS-Anzeige zum Thema Sozialdatenverarbeitung.')
 
 # Minio connection
-minio_client = connect_to_minio("192.168.178.23:9000", "minioadmin", "minioadmin")
+minio_client = connect_to_minio("localhost:9000", st.secrets['MinIO']['user'], st.secrets['MinIO']['pass'])
 
 if minio_client:
     with st.expander("MiniO Data Lake Inhalt"):
-        st.sidebar.success("Connected to MinIO")
+        st.success("Connected to MinIO")
 
         # Display buckets
         st.subheader("Buckets")
@@ -265,8 +266,14 @@ if minio_client:
             # Display objects in selected bucket
             st.write(f"Objects in {selected_bucket}")
             objects = list_objects(minio_client, selected_bucket)
-            for obj in objects:
-                st.write(obj)
+            selected_object = st.selectbox("Select an object", objects)
+            if selected_object:
+                try:
+                    # Download the selected pdf file
+                    data = minio_client.get_object(selected_bucket, selected_object)
+                    pdf_viewer(data.read())
+                except S3Error as e:
+                    st.error(f"Error: {e}")
         else:
             st.warning("No buckets found.")
 else:

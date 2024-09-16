@@ -7,6 +7,7 @@ streamlit
 streamlit-scrollable-textbox
 streamlit-cropper
 streamlit-audiorec
+streamlit-pdf-viewer
 openai
 beautifulsoup4
 python-docx

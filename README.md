@@ -56,15 +56,18 @@ To use the [MinIO](https://min.io/download?license=agpl&platform=docker) in Pyth
 python -m pip install --upgrade --force-reinstall minio
 ```
 
-### MinIO Podman Container
+### MinIO Server
 
 Install and run the MinIO Podman container with
 
 ```bash
-# MinIO Server
+# Podman MinIO Server
 podman machine init
 podman machine start
 podman run -p 9000:9000 -p 9001:9001 minio/minio server /data --console-address ":9001"
+
+# or local MinIO Server
+brew install minio/stable/minio
 ```
 
 ###  MinIO Client
