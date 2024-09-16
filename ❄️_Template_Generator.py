@@ -9,7 +9,7 @@ import pandas as pd
 import sys
 import datetime
 import requests
-from io import BytesIO
+from io import BytesIO, StringIO
 from bs4 import BeautifulSoup
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -231,10 +231,12 @@ sidebar = st.sidebar
 with sidebar:
     st.subheader("Template Generator")
     st.image('images/header.png', width=200)
+    minio = st.toggle("MinIO", True)
+    snowflake = st.toggle("Snowflake", False)
     kunde = st.text_input("Kunde:", value="GWQ ServicePlus AG")
     web = st.toggle("Webscraper", True)
-    kunde_url = st.text_input("Kunden-Webseite (z.B. `Über uns`):", value="https://www.gwq-serviceplus.de/ueber-uns")
     if web:
+        kunde_url = st.text_input("Kunden-Webseite (z.B. `Über uns`):", value="https://www.gwq-serviceplus.de/ueber-uns")
         kunde_info = web_scraper(kunde_url)
     cloud = st.selectbox("Cloud:", ["AWS", "Azure", "Google Cloud"], index=2)
     service_1 = 'Google Cloud Vision'
@@ -251,54 +253,63 @@ st.title('❄️ Template Generator')
 st.write('Dieses Tool erstellt ein Template-Dokument zu einer BAS-Anzeige zum Thema Sozialdatenverarbeitung.')
 
 # Minio connection
-minio_client = connect_to_minio("localhost:9000", st.secrets['MinIO']['user'], st.secrets['MinIO']['pass'])
+if minio:
+    minio_client = connect_to_minio("localhost:9000", st.secrets['MinIO']['user'], st.secrets['MinIO']['pass'])
 
-if minio_client:
-    with st.expander("MiniO Data Lake Inhalt"):
-        st.success("Connected to MinIO")
+    if minio_client:
+        with st.expander("MiniO Data Lake Inhalt"):
+            st.success("Connected to MinIO")
 
-        # Display buckets
-        st.subheader("Buckets")
-        buckets = list_buckets(minio_client)
-        if buckets:
-            selected_bucket = st.selectbox("Select a bucket", buckets)
+            # Display buckets
+            st.subheader("Buckets")
+            buckets = list_buckets(minio_client)
+            if buckets:
+                selected_bucket = st.selectbox("Select a bucket", buckets)
 
-            # Display objects in selected bucket
-            st.write(f"Objects in {selected_bucket}")
-            objects = list_objects(minio_client, selected_bucket)
-            selected_object = st.selectbox("Select an object", objects)
-            if selected_object:
-                try:
-                    # Download the selected pdf file
-                    data = minio_client.get_object(selected_bucket, selected_object)
-                    pdf_viewer(data.read())
-                except S3Error as e:
-                    st.error(f"Error: {e}")
-        else:
-            st.warning("No buckets found.")
-else:
-    st.error("Failed to connect to MinIO")
+                # Display objects in selected bucket
+                st.write(f"Objects in {selected_bucket}")
+                objects = list_objects(minio_client, selected_bucket)
+                selected_object = st.selectbox("Select an object", objects)
+                if selected_object:
+                    try:
+                        # Download the selected pdf file
+                        data = minio_client.get_object(selected_bucket, selected_object)
+                        pdf_viewer(data.read())
+                    except S3Error as e:
+                        st.error(f"Error: {e}")
+            else:
+                st.warning("No buckets found.")
+    else:
+        st.error("Failed to connect to MinIO")
 
 # Display data table
-with st.expander("Datenbankinhalt"):
-    # Establish Snowflake session
-    session = create_session()
-    st.success("Datenbankverbindung erfolgreich hergestellt.")
-    st.write(f"Streamlit Version: {st.__version__}")
-    st.write(f"Python Version: {sys.version}")
+if snowflake:
+    with st.expander("Datenbankinhalt"):
+        # Establish Snowflake session
+        session = create_session()
+        st.success("Datenbankverbindung erfolgreich hergestellt.")
+        st.write(f"Streamlit Version: {st.__version__}")
+        st.write(f"Python Version: {sys.version}")
 
-    df = load_data('OPENAI_DATABASE.PUBLIC.ANZEIGE_PRE')
-    st.dataframe(df)
-    paragraphs = load_data('OPENAI_DATABASE.PUBLIC.ANZEIGE_PARAGRAPHS')
-    st.dataframe(paragraphs)
-    options = load_data('OPENAI_DATABASE.PUBLIC.ANZEIGE_OPTIONS')
-    st.dataframe(options)
+        df = load_data('OPENAI_DATABASE.PUBLIC.ANZEIGE_PRE')
+        st.dataframe(df)
+        paragraphs = load_data('OPENAI_DATABASE.PUBLIC.ANZEIGE_PARAGRAPHS')
+        st.dataframe(paragraphs)
+        options = load_data('OPENAI_DATABASE.PUBLIC.ANZEIGE_OPTIONS')
+        st.dataframe(options)
 
 
 # Show ChatBot
 pg.run()
 
-with st.form("form"):
+
+# Main content
+with st.form("Forms"):
+    if minio:
+        options_csv = minio_client.get_object("templategenerator", "GWQ ServicePlus AG/options.csv")
+        csv_data = options_csv.read().decode('utf-8')
+        options = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
+
     st.title("Konfiguration")
     st.write("Bitte fülle die folgenden Felder aus, um bestmöglich ein Template generieren zu können.")
     st.header("Optionen")
