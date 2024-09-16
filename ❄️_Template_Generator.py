@@ -260,6 +260,17 @@ if minio:
         with st.expander("MiniO Data Lake Inhalt"):
             st.success("Connected to MinIO")
 
+            # Loading database tables from csv files
+            df_csv = minio_client.get_object("templategenerator", "anzeige_pre.csv")
+            csv_data = df_csv.read().decode('utf-8')
+            df = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
+            paragraphs_csv = minio_client.get_object("templategenerator", "anzeige_paragraphs.csv")
+            csv_data = paragraphs_csv.read().decode('utf-8')
+            paragraphs = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
+            options_csv = minio_client.get_object("templategenerator", "options.csv")
+            csv_data = options_csv.read().decode('utf-8')
+            options = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
+
             # Display buckets
             st.subheader("Buckets")
             buckets = list_buckets(minio_client)
@@ -305,10 +316,6 @@ pg.run()
 
 # Main content
 with st.form("Forms"):
-    if minio:
-        options_csv = minio_client.get_object("templategenerator", "GWQ ServicePlus AG/options.csv")
-        csv_data = options_csv.read().decode('utf-8')
-        options = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
 
     st.title("Konfiguration")
     st.write("Bitte fülle die folgenden Felder aus, um bestmöglich ein Template generieren zu können.")
@@ -576,10 +583,12 @@ if submitted:
                                                         ignore_index=True)
 
     st.dataframe(anzeige_temp)
-    write_data(anzeige_temp, table_name='ANZEIGE_TEMP', database='OPENAI_DATABASE', schema='PUBLIC')
+    if snowflake:
+        write_data(anzeige_temp, table_name='ANZEIGE_TEMP', database='OPENAI_DATABASE', schema='PUBLIC')
     with st.expander("Datenbankinhalt", expanded=False):
-        df = load_data('OPENAI_DATABASE.PUBLIC.ANZEIGE_TEMP')
-        st.dataframe(df)
+        if snowflake:
+            df = load_data('OPENAI_DATABASE.PUBLIC.ANZEIGE_TEMP')
+            st.dataframe(df)
 
     # Export to Word
     export_doc(anzeige_temp)
