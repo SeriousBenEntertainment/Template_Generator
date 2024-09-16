@@ -254,10 +254,9 @@ st.write('Dieses Tool erstellt ein Template-Dokument zu einer BAS-Anzeige zum Th
 
 # Minio connection
 if minio:
-    minio_client = connect_to_minio("localhost:9000", st.secrets['MinIO']['user'], st.secrets['MinIO']['pass'])
-
-    if minio_client:
-        with st.expander("MiniO Data Lake Inhalt"):
+    with st.expander("MinIO Data Lake Inhalt"):
+        minio_client = connect_to_minio("localhost:9000", st.secrets['MinIO']['user'], st.secrets['MinIO']['pass'])
+        if minio_client:
             st.success("Connected to MinIO")
 
             # Loading database tables from csv files
@@ -275,12 +274,12 @@ if minio:
             st.subheader("Buckets")
             buckets = list_buckets(minio_client)
             if buckets:
-                selected_bucket = st.selectbox("Select a bucket", buckets)
+                selected_bucket = st.selectbox("Wähle ein Bucket", buckets)
 
                 # Display objects in selected bucket
                 st.write(f"Objects in {selected_bucket}")
                 objects = list_objects(minio_client, selected_bucket)
-                selected_object = st.selectbox("Select an object", objects)
+                selected_object = st.selectbox("Wähle ein Objekt", objects)
                 if selected_object:
                     try:
                         # Download the selected pdf file
@@ -289,25 +288,28 @@ if minio:
                     except S3Error as e:
                         st.error(f"Error: {e}")
             else:
-                st.warning("No buckets found.")
-    else:
-        st.error("Failed to connect to MinIO")
+                st.warning("Keine Buckets gefunden.")
+        else:
+            st.error("Keine Verbindung zum MinIO Data Lake möglich.")
 
 # Display data table
 if snowflake:
     with st.expander("Datenbankinhalt"):
         # Establish Snowflake session
         session = create_session()
-        st.success("Datenbankverbindung erfolgreich hergestellt.")
-        st.write(f"Streamlit Version: {st.__version__}")
-        st.write(f"Python Version: {sys.version}")
+        if session:
+            st.success("Datenbankverbindung erfolgreich hergestellt.")
+            st.write(f"Streamlit Version: {st.__version__}")
+            st.write(f"Python Version: {sys.version}")
 
-        df = load_data('OPENAI_DATABASE.PUBLIC.ANZEIGE_PRE')
-        st.dataframe(df)
-        paragraphs = load_data('OPENAI_DATABASE.PUBLIC.ANZEIGE_PARAGRAPHS')
-        st.dataframe(paragraphs)
-        options = load_data('OPENAI_DATABASE.PUBLIC.ANZEIGE_OPTIONS')
-        st.dataframe(options)
+            df = load_data('OPENAI_DATABASE.PUBLIC.ANZEIGE_PRE')
+            st.dataframe(df)
+            paragraphs = load_data('OPENAI_DATABASE.PUBLIC.ANZEIGE_PARAGRAPHS')
+            st.dataframe(paragraphs)
+            options = load_data('OPENAI_DATABASE.PUBLIC.ANZEIGE_OPTIONS')
+            st.dataframe(options)
+        else:
+            st.error("Keine Verbindung zu Snowflake möglich.")
 
 
 # Show ChatBot
