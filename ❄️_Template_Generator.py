@@ -66,9 +66,9 @@ def list_objects(minio_client, bucket_name):
 
 def upload_files(minio_client, bucket_name, files):
     for file in files:
-        # Lesen Sie den Inhalt der hochgeladenen Datei
+        # Read file
         file_content = file.read()
-        # Laden Sie die Datei in MinIO hoch
+        # Upload to MinIO
         minio_client.put_object(
             bucket_name,
             file.name,
@@ -335,7 +335,6 @@ pg.run()
 
 # Main content
 with st.form("Forms"):
-
     st.title("Konfiguration")
     st.write("Bitte fülle die folgenden Felder aus, um bestmöglich ein Template generieren zu können.")
     st.header("Optionen")
@@ -479,7 +478,17 @@ with st.form("Forms"):
         paragraph_title_list = df["PARAGRAPH_TITLE"].tolist()
         combined_list = [f"{p:<6} - {t}" for p, t in zip(paragraph_list, paragraph_title_list)]
         chapters = st.multiselect("Absätze", options=combined_list, default=combined_list)
-        with st.expander("Weitere Absätze"):
+        with st.expander("Zusätzliche Informationen", expanded=False):
+            st.subheader("Auswahl zusätzlicher Informationen")
+            st.write("Wähle zusätzliche Informationen zum jeweiligen Absatz aus")
+            file_names = list_objects(minio_client, "templategenerator")
+            file_names = [file for file in file_names if file.endswith('.pdf')]
+            i = 0
+            for chapter in chapters:
+                st.write(chapter)
+                i += 1
+                st.multiselect("Wähle die zusätzlichen Informationen aus", options=file_names, key=f"multifiles{i}")
+        with st.expander("Weitere Absätze", expanded=False):
             table_of_contents = st.checkbox("Inhaltsverzeichnis hinzufügen?", value=True)
             #table_of_certs = st.checkbox("Zertifizierungen hinzufügen?", value=True)
             paragraph_of_summary = st.checkbox("Zusammenfassung hinzufügen?", value=True)
