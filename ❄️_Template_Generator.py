@@ -9,6 +9,7 @@ import pandas as pd
 import sys
 import datetime
 import requests
+import os
 from io import BytesIO, StringIO
 from bs4 import BeautifulSoup
 from docx import Document
@@ -61,7 +62,19 @@ def list_objects(minio_client, bucket_name):
         return [obj.object_name for obj in objects]
     except S3Error as e:
         st.error(f"Error: {e}")
-    return 
+    return
+
+def upload_files(minio_client, bucket_name, files):
+    for file in files:
+        # Lesen Sie den Inhalt der hochgeladenen Datei
+        file_content = file.read()
+        # Laden Sie die Datei in MinIO hoch
+        minio_client.put_object(
+            bucket_name,
+            file.name,
+            BytesIO(file_content),
+            len(file_content)
+        )
 
 # Establish Snowflake session
 @st.cache_resource
@@ -269,6 +282,10 @@ if minio:
             options_csv = minio_client.get_object("templategenerator", "options.csv")
             csv_data = options_csv.read().decode('utf-8')
             options = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
+
+            # Upload files
+            uploaded_files = st.file_uploader("Datei(en) hochladen", accept_multiple_files=True, type=['csv', 'pdf'])
+            upload_files(minio_client, "templategenerator", uploaded_files)
 
             # Display buckets
             st.subheader("Buckets")
