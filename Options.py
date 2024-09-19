@@ -5,16 +5,16 @@
 ### Loading needed Python libraries
 import streamlit as st
 import pandas as pd
+import ast
 from io import StringIO
 from Functions import list_objects
 
 # Options content
-def frontend_options(cloud, df, minio_client):
+def frontend_options(df, minio_client):
     # Importing questions
-    questions_csv = minio_client.get_object("templategenerator", "questions.csv")
-    csv_data = questions_csv.read().decode('utf-8')
-    questions = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
-    print(questions)
+    options_csv = minio_client.get_object("templategenerator", "options.csv")
+    csv_data = options_csv.read().decode('utf-8')
+    options = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
 
     with st.form("Forms"):
         st.title("Konfiguration")
@@ -26,36 +26,43 @@ def frontend_options(cloud, df, minio_client):
         key = 0
         cont = []
         cont_y = []
-        for index, question in questions.iterrows():
-            if question['TYPE'] == 'HEADER':
+        for _, option in options.iterrows():
+            if option['TYPE'] == 'HEADER':
                 i += 1
-                with st.expander(question['QUESTION']):
+                with st.expander(option['QUESTION']):
                     cont.append(st.container(border=True))
-                    cont[i].header(question['QUESTION'])
-            if question['TYPE'] == 'SUBHEADER':
+                    with cont[i]:
+                        st.header(option['QUESTION'])
+                        st.write(option['DEFAULT'])
+            if option['TYPE'] == 'SUBHEADER':
                 with cont[i]:
                     y += 1
                     cont_y.append(st.container(border=True))
-                    cont_y[y].subheader(question['QUESTION'])
-            if question['TYPE'] == 'DESC':
+                    with cont_y[y]:
+                        st.subheader(option['QUESTION'])
+                        st.write(option['DEFAULT'])
+            if option['TYPE'] == 'DESC':
                 with cont[i]:
                     with cont_y[y]:
-                        st.markdown(f"**{question['QUESTION']}**")
-            if question['TYPE'] == 'TEXT':
-                with cont[i]:
-                    with cont_y[y]:
-                        key += 1
-                        st.text_input(question['QUESTION'], key=f"option_{key}", value=str(question['DEFAULT']))
-            if question['TYPE'] == 'BOOL':
+                        st.markdown(f"**{option['QUESTION']}**")
+            if option['TYPE'] == 'TEXT':
                 with cont[i]:
                     with cont_y[y]:
                         key += 1
-                        st.toggle(question['QUESTION'], key=f"option_{key}", value=eval(question['DEFAULT']))
-            if question['TYPE'] == 'SELECT':
+                        st.text_input(option['QUESTION'], key=f"option_{key}", value=str(option['DEFAULT']))
+                        
+            if option['TYPE'] == 'BOOL':
                 with cont[i]:
                     with cont_y[y]:
                         key += 1
-                        st.selectbox(question['QUESTION'], options=['Cloud Key Management Service'], key=f"option_{key}", index=int(question['DEFAULT']))
+                        st.toggle(option['QUESTION'], key=f"option_{key}", value=eval(option['DEFAULT']))
+            if option['TYPE'] == 'SELECT':
+                with cont[i]:
+                    with cont_y[y]:
+                        key += 1
+                        options_selectbox = ast.literal_eval(option['DEFAULT'])[1:]
+                        index_selectbox = ast.literal_eval(option['DEFAULT'])[0]
+                        st.selectbox(option['QUESTION'], options=options_selectbox, key=f"option_{key}", index=int(index_selectbox))
 
         st.header("Template")
         st.write("Bitte wähle die Einstellungen für das Word Dokument aus.")
@@ -75,7 +82,11 @@ def frontend_options(cloud, df, minio_client):
                 st.subheader("Auswahl zusätzlicher Informationen")
                 st.write("Wähle zusätzliche Informationen zum jeweiligen Absatz aus")
                 file_names = list_objects(minio_client, "templategenerator")
-                file_names = [file for file in file_names if file.endswith('.pdf')]
+                file_names = [
+                                file 
+                                for file in file_names 
+                                if file.endswith(('.pdf','docx'))
+                            ]
                 i = 0
                 for chapter in chapters:
                     st.write(chapter)

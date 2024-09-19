@@ -10,10 +10,14 @@ streamlit-audiorec
 streamlit-pdf-viewer
 openai
 beautifulsoup4
-python-docx
 argparse
 #pypiwin32
 #docopt
+python-docx
+docx2pdf
+pdf2docx
+pypandoc
+reportlab
 deepl
 pillow
 PyPDF2
