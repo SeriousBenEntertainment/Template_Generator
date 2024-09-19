@@ -28,6 +28,31 @@ pages = {
     ]
 }
 
+# Show the main page and sidebar
+pg = st.navigation(pages, position="sidebar")
+
+# Sidebar
+sidebar = st.sidebar
+with sidebar:
+    st.subheader("Template Generator")
+    st.image('images/header.png', width=200)
+    minio = st.toggle("MinIO", True)
+    snowflake = st.toggle("Snowflake", False)
+    kunde = st.text_input("Kunde:", value="GWQ ServicePlus AG")
+    web = st.toggle("Webscraper", True)
+    if web:
+        kunde_url = st.text_input("Kunden-Webseite (z.B. `Über uns`):", value="https://www.gwq-serviceplus.de/ueber-uns")
+        kunde_info = web_scraper(kunde_url)
+    cloud = st.selectbox("Cloud:", options=["AWS", "Azure", "Google Cloud"], index=2)
+    service_1 = 'Google Cloud Vision'
+    service_2 = 'Google Translate'
+    on = st.toggle("OpenAI ChatGPT", False)
+    if not on:
+        st.markdown("Local Server Configuration")
+        url = st.text_input("URL:", value="http://localhost")
+        port = st.number_input("Port:", value=1234, min_value=1, max_value=65535)
+    system = st.text_input("System:", value = f"Du erstellst einzelne Absätze einer Anzeige beim Bundesamt für Soziale Sicherung über die Verarbeitung von Sozialdaten im Auftrag (AVV) nach § 80 Zehntes Sozialgesetzbuch (SGB X). Tausche die Platzhalter (z.B. <Kunde>) durch die entsprechenden Inhalte aus und gebe nur den verbesserten Text in einer sachlichen und formellen Form aus und verzichte auf Phrasen wie z.B. 'Vielen Dank für die Informationen. Hier sind die angepassten Absätze für die Anzeige beim Bundesamt für Soziale Sicherung:'.")
+
 # Convert DOCX to PDF
 def convert_docx_to_pdf(docx_content):
     # Creating a BytesIO object for the input file
@@ -63,31 +88,6 @@ def convert_docx_to_pdf(docx_content):
     # Relocating the pointer to the beginning of the output stream
     output_stream.seek(0)
     return output_stream.read()
-
-# Show the main page and sidebar
-pg = st.navigation(pages, position="sidebar")
-
-# Sidebar
-sidebar = st.sidebar
-with sidebar:
-    st.subheader("Template Generator")
-    st.image('images/header.png', width=200)
-    minio = st.toggle("MinIO", True)
-    snowflake = st.toggle("Snowflake", False)
-    kunde = st.text_input("Kunde:", value="GWQ ServicePlus AG")
-    web = st.toggle("Webscraper", True)
-    if web:
-        kunde_url = st.text_input("Kunden-Webseite (z.B. `Über uns`):", value="https://www.gwq-serviceplus.de/ueber-uns")
-        kunde_info = web_scraper(kunde_url)
-    cloud = st.selectbox("Cloud:", options=["AWS", "Azure", "Google Cloud"], index=2)
-    service_1 = 'Google Cloud Vision'
-    service_2 = 'Google Translate'
-    on = st.toggle("OpenAI ChatGPT", False)
-    if not on:
-        st.markdown("Local Server Configuration")
-        url = st.text_input("URL:", value="http://localhost")
-        port = st.number_input("Port:", value=1234, min_value=1, max_value=65535)
-    system = st.text_input("System:", value = f"Du erstellst einzelne Absätze einer Anzeige beim Bundesamt für Soziale Sicherung über die Verarbeitung von Sozialdaten im Auftrag (AVV) nach § 80 Zehntes Sozialgesetzbuch (SGB X). Tausche die Platzhalter (z.B. <Kunde>) durch die entsprechenden Inhalte aus und gebe nur den verbesserten Text in einer sachlichen und formellen Form aus und verzichte auf Phrasen wie z.B. 'Vielen Dank für die Informationen. Hier sind die angepassten Absätze für die Anzeige beim Bundesamt für Soziale Sicherung:'.")
 
 # Title
 st.title('❄️ Template Generator')

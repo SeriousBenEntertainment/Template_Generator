@@ -316,7 +316,7 @@ with st.expander('ChatBot'):
                 if st.session_state['benbox'] != '':
                     st.image(st.session_state['benbox'])
                 else:
-                    st.image(images/BenBox_small.png)
+                    st.image('images/BenBox_small.png')
             for i in range(len(messages_input)):
                 if i > 0:
                     if i % 2 == 1:
