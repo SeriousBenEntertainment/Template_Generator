@@ -22,6 +22,7 @@ sys.path.insert(1, "pages/functions/")
 from Options import frontend_options
 from Functions import connect_to_minio, list_buckets, list_objects, upload_files, create_session, load_data, write_data, export_doc, web_scraper
 
+# Define the pages
 pages = {
     "Home": [
         st.Page("🤖_OpenAI.py", title="❄️ Template Generator", icon="🤖"),
@@ -139,12 +140,6 @@ if minio:
                         if selected_object.endswith('.pdf'):
                             pdf_viewer(data.read(), height=800)
                         if selected_object.endswith('.docx'):
-                            # Save the file locally
-                            #with open("input.docx", "wb") as file:
-                                #file.write(data.read())
-                            #convert("input.docx", "output.pdf")
-                            # Open the PDF
-                            #with open("output.pdf", "rb") as data:
                             pdf_viewer(convert_docx_to_pdf(data.read()), height=800)
                     except S3Error as e:
                         st.error(f"Error: {e}")
@@ -167,8 +162,8 @@ if snowflake:
             st.dataframe(df)
             paragraphs = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_PARAGRAPHS')
             st.dataframe(paragraphs)
-            options = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_OPTIONS')
-            st.dataframe(options)
+            #options = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_OPTIONS')
+            #st.dataframe(options)
         else:
             st.error("Keine Verbindung zu Snowflake möglich.")
 
@@ -177,7 +172,7 @@ if snowflake:
 pg.run()
 
 # Show options
-submitted, chapters,  table_of_contents, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments = frontend_options(df, minio_client)
+submitted, chapters, table_of_contents, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments, options = frontend_options(df, minio_client)
 
 if submitted:
     # Erase previous messages
@@ -251,8 +246,8 @@ if submitted:
                             paragraph_info = paragraph_info.replace('\n', ' ')
                             prompt += paragraph_info
                 if '<option_' in prompt:
-                    for option in options['OPTION_DESC']: 
-                        prompt = prompt.replace(f"<{option}>", str(options[options['OPTION_DESC'] == option].drop(columns=options.columns[:1]).to_string(index=False, header=False)))
+                    for option in options['DESC']: 
+                        prompt = prompt.replace(f"<{option}>", str(options[options['DESC'] == option].drop(columns=options.columns[:1]).to_string(index=False, header=False)))
 
                 st.chat_message("human").write(prompt)
 
