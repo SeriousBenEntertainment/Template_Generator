@@ -34,21 +34,29 @@ def connect_to_minio(endpoint_url, access_key, secret_key):
 def list_buckets(minio_client):
     try:
         buckets = minio_client.list_buckets()
-        return [bucket.name for bucket in buckets]
+        return [
+                    bucket.name.replace('-', ' ').title()
+                    for bucket in buckets
+                ]
     except S3Error as e:
         st.error(f"Error: {e}")
     return 
 
 # Function to list objects in a bucket
 def list_objects(minio_client, bucket_name):
+    bucket_name = bucket_name.lower().replace(' ', '-')
     try:
         objects = minio_client.list_objects(bucket_name, recursive=True)
-        return [obj.object_name for obj in objects]
+        return [
+                    obj.object_name 
+                    for obj in objects
+                ]
     except S3Error as e:
         st.error(f"Error: {e}")
     return
 
 def upload_files(minio_client, bucket_name, files):
+    bucket_name = bucket_name.lower().replace(' ', '-')
     for file in files:
         # Read file
         file_content = file.read()

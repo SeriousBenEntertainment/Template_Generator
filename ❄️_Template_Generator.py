@@ -38,6 +38,12 @@ with sidebar:
     st.subheader("Template Generator")
     st.image('images/header.png', width=200)
     minio = st.toggle("MinIO", True)
+    if minio:
+        try:
+            minio_client = connect_to_minio("localhost:9000", st.secrets['MinIO']['user'], st.secrets['MinIO']['pass'])
+            schema = st.selectbox("Wähle die passenden Konfiguration", options=list_buckets(minio_client))
+        except S3Error as e:
+            st.error(f"Error: {e}")
     snowflake = st.toggle("Snowflake", False)
     kunde = st.text_input("Kunde:", value="GWQ ServicePlus AG")
     web = st.toggle("Webscraper", True)
@@ -97,15 +103,16 @@ st.write('Dieses Tool erstellt ein Template-Dokument zu einer BAS-Anzeige zum Th
 # Minio connection
 if minio:
     with st.expander("MinIO Data Lake Inhalt"):
-        minio_client = connect_to_minio("localhost:9000", st.secrets['MinIO']['user'], st.secrets['MinIO']['pass'])
         if minio_client:
-            st.success("Connected to MinIO")
+            st.success("Datenbankverbindung erfolgreich hergestellt.")
+            st.write(f"Streamlit Version: {st.__version__}")
+            st.write(f"Python Version: {sys.version}")
 
             # Loading database tables from csv files
-            df_csv = minio_client.get_object("templategenerator", "anzeige_pre.csv")
+            df_csv = minio_client.get_object(schema.lower().replace(' ', '-'), "anzeige_pre.csv")
             csv_data = df_csv.read().decode('utf-8')
             df = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
-            paragraphs_csv = minio_client.get_object("templategenerator", "anzeige_paragraphs.csv")
+            paragraphs_csv = minio_client.get_object(schema.lower().replace(' ', '-'), "anzeige_paragraphs.csv")
             csv_data = paragraphs_csv.read().decode('utf-8')
             paragraphs = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
 
@@ -113,20 +120,18 @@ if minio:
             uploaded_files = st.file_uploader("Datei(en) hochladen", accept_multiple_files=True, type=['csv', 'pdf', 'docx'])
             if uploaded_files:
                 try:
-                    upload_files(minio_client, "templategenerator", uploaded_files)
+                    upload_files(minio_client, schema, uploaded_files)
                     st.success("Datei(en) erfolgreich hochgeladen.")
                 except S3Error as e:
                     st.error(f"Error: {e}")
 
             # Display buckets
-            st.subheader("Buckets")
+            st.subheader("Dateien")
             buckets = list_buckets(minio_client)
             if buckets:
-                selected_bucket = st.selectbox("Wähle ein Bucket", buckets)
-
                 # Display objects in selected bucket
-                st.write(f"Objects in {selected_bucket}")
-                objects = list_objects(minio_client, selected_bucket)
+                st.write(f"Objekte in {schema}-Schema")
+                objects = list_objects(minio_client, schema)
                 filtered_objects = [
                                         object
                                         for object in objects
@@ -136,7 +141,7 @@ if minio:
                 if selected_object:
                     try:
                         # Download the selected file and display it
-                        data = minio_client.get_object(selected_bucket, selected_object)
+                        data = minio_client.get_object(schema.lower().replace(' ', '-'), selected_object)
                         if selected_object.endswith('.pdf'):
                             pdf_viewer(data.read(), height=800)
                         if selected_object.endswith('.docx'):
@@ -151,20 +156,21 @@ if minio:
 # Snowflake connection
 if snowflake:
     with st.expander("Datenbankinhalt"):
-        # Establish Snowflake session
-        session = create_session()
-        if session:
-            st.success("Datenbankverbindung erfolgreich hergestellt.")
-            st.write(f"Streamlit Version: {st.__version__}")
-            st.write(f"Python Version: {sys.version}")
+        try:
+            # Establish Snowflake session
+            session = create_session()
+            if session:
+                st.success("Datenbankverbindung erfolgreich hergestellt.")
+                st.write(f"Streamlit Version: {st.__version__}")
+                st.write(f"Python Version: {sys.version}")
 
-            df = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_PRE')
-            st.dataframe(df)
-            paragraphs = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_PARAGRAPHS')
-            st.dataframe(paragraphs)
-            #options = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_OPTIONS')
-            #st.dataframe(options)
-        else:
+                df = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_PRE')
+                st.dataframe(df)
+                paragraphs = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_PARAGRAPHS')
+                st.dataframe(paragraphs)
+                #options = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_OPTIONS')
+                #st.dataframe(options)
+        except:
             st.error("Keine Verbindung zu Snowflake möglich.")
 
 
@@ -172,128 +178,131 @@ if snowflake:
 pg.run()
 
 # Show options
-submitted, chapters, table_of_contents, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments, options = frontend_options(df, minio_client)
+try:
+    submitted, chapters, table_of_contents, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments, options = frontend_options(df, schema, minio_client)
 
-if submitted:
-    # Erase previous messages
-    st.session_state.pop("langchain_messages", None)
-    
-    # Set up memory
-    msgs = StreamlitChatMessageHistory(key="langchain_messages")
-    if len(msgs.messages) == 0:
-        msgs.add_ai_message(f"""Ich schreibe den Text in einer sachlichen und formellen
-                                Form um und ersetze <Kunde> mit {kunde}, 
-                                <Cloud-Anbieter> mit {cloud}.""")
-
-    # Set up the LangChain, passing in Message History
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", f"{system}"),
-            MessagesPlaceholder(variable_name="history"),
-            ("human", "{question}"),
-        ]
-    )
-
-    # Setting the LLM
-    if on:
-        chain = prompt | ChatOpenAI(
-            model="gpt-4o-mini",
-            api_key=st.secrets["openai"]["key"]
-        )
-    else:
-        server_url = f"{url}:{str(port)}/v1"
-        chain = prompt | ChatOpenAI(
-            base_url=server_url,
-            model="llama-3-8b-chat-doctor-Q4_K_M_v2",
-            temperature=0.5,
-            max_tokens=4000,
-            api_key="lm-studio"
-      )
-
-    chain_with_history = RunnableWithMessageHistory(
-        chain,
-        lambda session_id: msgs,
-        input_messages_key="question",
-        history_messages_key="history",
-    )
-
-    # Render current messages from StreamlitChatMessageHistory
-    view_messages = st.status("Anzeige wird generiert...")
-    with view_messages:
-        for msg in msgs.messages:
-            st.chat_message(msg.type).write(msg.content)
-
-        # If user inputs a new prompt, generate and draw a new response
-        chosen_chapters = []
-        for chapter in chapters:
-            # Erasing the first 9 letters
-            last_chapter = chapter[0]
-            chapter = chapter[9:]
-            chosen_chapters.append(chapter)
-
-        for text in df["PARAGRAPH_TEXT"]:
-            if df["PARAGRAPH_TITLE"][df["PARAGRAPH_TEXT"] == text].to_string(index=False, header=False) in chosen_chapters:
-                if '<Kundeninfo>' in text and web:
-                    prompt = text.replace('<Kunde>', str(kunde)).replace('<Cloud-Anbieter>', str(cloud)).replace('<Kundeninfo>', str(kunde_info))
-                else:
-                    prompt = text.replace('<Kunde>', str(kunde)).replace('<Cloud-Anbieter>', str(cloud))
-                if '<§' or '<Art.' in prompt:
-                    for paragraph in paragraphs["PARAGRAPH"]:
-                        # Checking for matching paragraph
-                        if paragraph in prompt:
-                            prompt = prompt.replace(f"<{paragraph}>", paragraphs[paragraphs['PARAGRAPH'] == paragraph].drop(columns=paragraphs.columns[-1]).to_string(index=False, header=False))
-                            paragraph_info = web_scraper(paragraphs[paragraphs['PARAGRAPH'] == paragraph].drop(columns=paragraphs.columns[:2]).to_string(index=False, header=False))
-                            paragraph_info = paragraph_info.replace('\n', ' ')
-                            prompt += paragraph_info
-                if '<option_' in prompt:
-                    for option in options['DESC']: 
-                        prompt = prompt.replace(f"<{option}>", str(options[options['DESC'] == option].drop(columns=options.columns[:1]).to_string(index=False, header=False)))
-
-                st.chat_message("human").write(prompt)
-
-                # Note: new messages are saved to history automatically by Langchain during run
-                config = {"configurable": {"session_id": "any"}}
-                response = chain_with_history.invoke({"question": prompt}, config)
-                st.chat_message("ai").write(response.content)
-
-    # Draw the messages at the end, so newly generated ones show up immediately
-    view_chat_messages = st.expander("Zeige die Daten des Chatbots.")
-    with view_chat_messages:
-        """
-        Message History initialized with:
-        ```python
+    if submitted:
+        # Erase previous messages
+        st.session_state.pop("langchain_messages", None)
+        
+        # Set up memory
         msgs = StreamlitChatMessageHistory(key="langchain_messages")
-        ```
+        if len(msgs.messages) == 0:
+            msgs.add_ai_message(f"""Ich schreibe den Text in einer sachlichen und formellen
+                                    Form um und ersetze <Kunde> mit {kunde}, 
+                                    <Cloud-Anbieter> mit {cloud}.""")
 
-        Contents of `st.session_state.langchain_messages`:
-        """
-        view_chat_messages.json(st.session_state.langchain_messages)
+        # Set up the LangChain, passing in Message History
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", f"{system}"),
+                MessagesPlaceholder(variable_name="history"),
+                ("human", "{question}"),
+            ]
+        )
 
-    # Convert to dataframe
-    messages = st.session_state.langchain_messages
-    anzeige_temp = pd.DataFrame(columns=['PARAGRAPH', 'PARAGRAPH_TITLE', 'PARAGRAPH_TEXT'])
-    counter = -1
-    paragraph = -1
-    for index, message in enumerate(messages):
-        for key, value in message:
-            if key == "content":
-                counter += 1
-                if counter > 0 and counter % 2 == 0:
-                    paragraph += 1
-                    anzeige_temp = anzeige_temp._append(pd.DataFrame([{
-                                                                        'PARAGRAPH': df['PARAGRAPH'][paragraph],
-                                                                        'PARAGRAPH_TITLE': df['PARAGRAPH_TITLE'][paragraph],
-                                                                        'PARAGRAPH_TEXT': value
-                                                                      }]), 
-                                                        ignore_index=True)
+        # Setting the LLM
+        if on:
+            chain = prompt | ChatOpenAI(
+                model="gpt-4o-mini",
+                api_key=st.secrets["openai"]["key"]
+            )
+        else:
+            server_url = f"{url}:{str(port)}/v1"
+            chain = prompt | ChatOpenAI(
+                base_url=server_url,
+                model="llama-3-8b-chat-doctor-Q4_K_M_v2",
+                temperature=0.5,
+                max_tokens=4000,
+                api_key="lm-studio"
+        )
 
-    st.dataframe(anzeige_temp)
-    if snowflake:
-        write_data(session, anzeige_temp, table_name='ANZEIGE_TEMP', database='OPENAI_DATABASE', schema='PUBLIC')
-    with st.expander("Datenbankinhalt", expanded=False):
+        chain_with_history = RunnableWithMessageHistory(
+            chain,
+            lambda session_id: msgs,
+            input_messages_key="question",
+            history_messages_key="history",
+        )
+
+        # Render current messages from StreamlitChatMessageHistory
+        view_messages = st.status("Anzeige wird generiert...")
+        with view_messages:
+            for msg in msgs.messages:
+                st.chat_message(msg.type).write(msg.content)
+
+            # If user inputs a new prompt, generate and draw a new response
+            chosen_chapters = []
+            for chapter in chapters:
+                # Erasing the first 9 letters
+                last_chapter = chapter[0]
+                chapter = chapter[9:]
+                chosen_chapters.append(chapter)
+
+            for text in df["PARAGRAPH_TEXT"]:
+                if df["PARAGRAPH_TITLE"][df["PARAGRAPH_TEXT"] == text].to_string(index=False, header=False) in chosen_chapters:
+                    if '<Kundeninfo>' in text and web:
+                        prompt = text.replace('<Kunde>', str(kunde)).replace('<Cloud-Anbieter>', str(cloud)).replace('<Kundeninfo>', str(kunde_info))
+                    else:
+                        prompt = text.replace('<Kunde>', str(kunde)).replace('<Cloud-Anbieter>', str(cloud))
+                    if '<§' or '<Art.' in prompt:
+                        for paragraph in paragraphs["PARAGRAPH"]:
+                            # Checking for matching paragraph
+                            if paragraph in prompt:
+                                prompt = prompt.replace(f"<{paragraph}>", paragraphs[paragraphs['PARAGRAPH'] == paragraph].drop(columns=paragraphs.columns[-1]).to_string(index=False, header=False))
+                                paragraph_info = web_scraper(paragraphs[paragraphs['PARAGRAPH'] == paragraph].drop(columns=paragraphs.columns[:2]).to_string(index=False, header=False))
+                                paragraph_info = paragraph_info.replace('\n', ' ')
+                                prompt += paragraph_info
+                    if '<option_' in prompt:
+                        for option in options['DESC']: 
+                            prompt = prompt.replace(f"<{option}>", str(options[options['DESC'] == option].drop(columns=options.columns[:1]).to_string(index=False, header=False)))
+
+                    st.chat_message("human").write(prompt)
+
+                    # Note: new messages are saved to history automatically by Langchain during run
+                    config = {"configurable": {"session_id": "any"}}
+                    response = chain_with_history.invoke({"question": prompt}, config)
+                    st.chat_message("ai").write(response.content)
+
+        # Draw the messages at the end, so newly generated ones show up immediately
+        view_chat_messages = st.expander("Zeige die Daten des Chatbots.")
+        with view_chat_messages:
+            """
+            Message History initialized with:
+            ```python
+            msgs = StreamlitChatMessageHistory(key="langchain_messages")
+            ```
+
+            Contents of `st.session_state.langchain_messages`:
+            """
+            view_chat_messages.json(st.session_state.langchain_messages)
+
+        # Convert to dataframe
+        messages = st.session_state.langchain_messages
+        anzeige_temp = pd.DataFrame(columns=['PARAGRAPH', 'PARAGRAPH_TITLE', 'PARAGRAPH_TEXT'])
+        counter = -1
+        paragraph = -1
+        for index, message in enumerate(messages):
+            for key, value in message:
+                if key == "content":
+                    counter += 1
+                    if counter > 0 and counter % 2 == 0:
+                        paragraph += 1
+                        anzeige_temp = anzeige_temp._append(pd.DataFrame([{
+                                                                            'PARAGRAPH': df['PARAGRAPH'][paragraph],
+                                                                            'PARAGRAPH_TITLE': df['PARAGRAPH_TITLE'][paragraph],
+                                                                            'PARAGRAPH_TEXT': value
+                                                                        }]), 
+                                                            ignore_index=True)
+
+        st.dataframe(anzeige_temp)
         if snowflake:
-            df = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_TEMP')
-            st.dataframe(df)
+            write_data(session, anzeige_temp, table_name='ANZEIGE_TEMP', database='OPENAI_DATABASE', schema='PUBLIC')
+        with st.expander("Datenbankinhalt", expanded=False):
+            if snowflake:
+                df = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_TEMP')
+                st.dataframe(df)
 
-    # Export to Word
-    export_doc(anzeige_temp, cloud, service_1, service_2, last_chapter, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments, table_of_contents)
+        # Export to Word
+        export_doc(anzeige_temp, cloud, service_1, service_2, last_chapter, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments, table_of_contents)
+except:
+    st.error("Keine Konfiguration geladen.")

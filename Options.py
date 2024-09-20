@@ -10,7 +10,7 @@ from io import StringIO
 from Functions import list_objects
 
 # Options content
-def frontend_options(df, minio_client):
+def frontend_options(df, schema, minio_client):
     # Decrypting the dataframe
     paragraph_list = df["PARAGRAPH"].tolist()
     paragraph_title_list = df["PARAGRAPH_TITLE"].tolist()
@@ -20,7 +20,7 @@ def frontend_options(df, minio_client):
                     ]
 
     # Importing options
-    options_csv = minio_client.get_object("templategenerator", "options.csv")
+    options_csv = minio_client.get_object(schema.lower().replace(' ', '-'), "options.csv")
     csv_data = options_csv.read().decode('utf-8')
     options = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
     with st.form("Forms"):
@@ -30,7 +30,7 @@ def frontend_options(df, minio_client):
         st.write("Bitte fülle die folgenden Felder mit den fachlichen Informationen aus.")
         
         # Initialize variables
-        options_output = pd.DataFrame(columns=["ANSWER", "FILES"])
+        options_output = pd.DataFrame(columns=["ANSWER", "PARAGRAPH", "FILES"])
         i, x, y, key = -1, 0, -1, 0
         cont, cont_y = [], []
         file_names = list_objects(minio_client, "templategenerator")
@@ -86,6 +86,7 @@ def frontend_options(df, minio_client):
                     with cont_y[y]:
                         key += 1
                         answer = st.text_input(option['QUESTION'], key=f"option_{key}", value=str(option['DEFAULT']))
+                        paragraph = option['CHAPTER_PARAGRAPH']
                         if chapter_paragraph:
                             st.text(f"Zugehörige Absätze: {', '.join(chapter_paragraph)}", help=help_text)
                         x += 1
@@ -98,6 +99,7 @@ def frontend_options(df, minio_client):
                     with cont_y[y]:
                         key += 1
                         answer = st.toggle(option['QUESTION'], key=f"option_{key}", value=eval(option['DEFAULT']))
+                        paragraph = option['CHAPTER_PARAGRAPH']
                         if chapter_paragraph:
                             st.text(f"Zugehörige Absätze: {', '.join(chapter_paragraph)}", help=help_text)
                         st.markdown("---")
@@ -110,15 +112,16 @@ def frontend_options(df, minio_client):
                         options_selectbox = ast.literal_eval(option['DEFAULT'])[1:]
                         index_selectbox = ast.literal_eval(option['DEFAULT'])[0]
                         answer = st.selectbox(option['QUESTION'], options=options_selectbox, key=f"option_{key}", index=int(index_selectbox))
+                        paragraph = option['CHAPTER_PARAGRAPH']
                         st.markdown("---")
 
             # Creating output
             if option['TYPE'] == 'SELECT' or option['TYPE'] == 'TEXT' or option['TYPE'] == 'BOOL':
                 if option['TYPE'] == 'Text':
-                    options_output = options_output._append({"ANSWER": answer, "FILES": files}, ignore_index=True)
+                    options_output = options_output._append({"ANSWER": answer, "PARAGRAPH": paragraph, "FILES": files}, ignore_index=True)
                 else:
-                    options_output = options_output._append({"ANSWER": answer, "FILES": []}, ignore_index=True)
-        #print(options_output)
+                    options_output = options_output._append({"ANSWER": answer, "PARAGRAPH": paragraph, "FILES": []}, ignore_index=True)
+        print(options_output)
 
         # Template generation
         st.header("Template")
