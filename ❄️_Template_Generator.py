@@ -6,6 +6,7 @@
 import streamlit as st
 from streamlit_pdf_viewer import pdf_viewer
 import pandas as pd
+pd.set_option('display.max_colwidth', None)
 import sys
 from io import StringIO, BytesIO
 from minio.error import S3Error
@@ -40,25 +41,40 @@ with sidebar:
     minio = st.toggle("MinIO", True)
     if minio:
         try:
+            # Establish MinIO session
             minio_client = connect_to_minio("localhost:9000", st.secrets['MinIO']['user'], st.secrets['MinIO']['pass'])
-            schema = st.selectbox("Wähle die passenden Konfiguration", options=list_buckets(minio_client))
+            
+            # Select Schema
+            schema = st.selectbox("Wähle die passende Konfiguration", options=list_buckets(minio_client))
+            
+            # Importing presets
+            presets_csv = minio_client.get_object(schema.lower().replace(' ', '-'), "presets.csv")
+            csv_data = presets_csv.read().decode('utf-8')
+            presets = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
         except S3Error as e:
-            st.error(f"Error: {e}")
+            st.error(f"Keine Verbindung zu MinIO möglich: {e}")
     snowflake = st.toggle("Snowflake", False)
-    kunde = st.text_input("Kunde:", value="GWQ ServicePlus AG")
-    web = st.toggle("Webscraper", True)
-    if web:
-        kunde_url = st.text_input("Kunden-Webseite (z.B. `Über uns`):", value="https://www.gwq-serviceplus.de/ueber-uns")
-        kunde_info = web_scraper(kunde_url)
-    cloud = st.selectbox("Cloud:", options=["AWS", "Azure", "Google Cloud"], index=2)
-    service_1 = 'Google Cloud Vision'
-    service_2 = 'Google Translate'
-    on = st.toggle("OpenAI ChatGPT", False)
-    if not on:
-        st.markdown("Local Server Configuration")
-        url = st.text_input("URL:", value="http://localhost")
-        port = st.number_input("Port:", value=1234, min_value=1, max_value=65535)
-    system = st.text_input("System:", value = f"Du erstellst einzelne Absätze einer Anzeige beim Bundesamt für Soziale Sicherung über die Verarbeitung von Sozialdaten im Auftrag (AVV) nach § 80 Zehntes Sozialgesetzbuch (SGB X). Tausche die Platzhalter (z.B. <Kunde>) durch die entsprechenden Inhalte aus und gebe nur den verbesserten Text in einer sachlichen und formellen Form aus und verzichte auf Phrasen wie z.B. 'Vielen Dank für die Informationen. Hier sind die angepassten Absätze für die Anzeige beim Bundesamt für Soziale Sicherung:'.")
+    if snowflake:
+        try:
+            # Establish Snowflake session
+            session = create_session()
+        except Exception as e:
+            st.error(f"Keine Verbindung zu Snowflake möglich: {e}")
+    try:
+        kunde = st.text_input("Kunde:", value=presets['DEFAULT'][presets['OPTION'] == 'Kunde'].to_string(index=False))
+        web = st.toggle("Webscraper", value=eval(presets['DEFAULT'][presets['OPTION'] == 'Webscraper'].to_string(index=False)))
+        if web:
+            kunde_url = st.text_input("Kunden-Webseite (z.B. `Über uns`):", value=presets['DEFAULT'][presets['OPTION'] == 'WebUrl'].to_string(index=False))
+            kunde_info = web_scraper(kunde_url)
+        cloud = st.selectbox("Cloud:", options=["AWS", "Azure", "Google Cloud"], index=int(presets['DEFAULT'][presets['OPTION'] == 'Cloud'].to_string(index=False)))
+        on = st.toggle("OpenAI ChatGPT", value=eval(presets['DEFAULT'][presets['OPTION'] == 'OpenAI'].to_string(index=False)))
+        if not on:
+            st.markdown("Local Server Configuration")
+            url = st.text_input("URL:", value=presets['DEFAULT'][presets['OPTION'] == 'LLMUrl'].to_string(index=False))
+            port = st.number_input("Port:", value=int(presets['DEFAULT'][presets['OPTION'] == 'LLMPort'].to_string(index=False)), min_value=1, max_value=65535)
+        system = st.text_input("System:", value =presets['DEFAULT'][presets['OPTION'] == 'System'].to_string(index=False))
+    except:
+        st.error("Keine Konfiguration geladen.")
 
 # Convert DOCX to PDF
 def convert_docx_to_pdf(docx_content):
@@ -103,62 +119,63 @@ st.write('Dieses Tool erstellt ein Template-Dokument zu einer BAS-Anzeige zum Th
 # Minio connection
 if minio:
     with st.expander("MinIO Data Lake Inhalt"):
-        if minio_client:
-            st.success("Datenbankverbindung erfolgreich hergestellt.")
-            st.write(f"Streamlit Version: {st.__version__}")
-            st.write(f"Python Version: {sys.version}")
+        try:
+            if minio_client:
+                st.success("Datenbankverbindung erfolgreich hergestellt.")
+                st.write(f"Streamlit Version: {st.__version__}")
+                st.write(f"Python Version: {sys.version}")
 
-            # Loading database tables from csv files
-            df_csv = minio_client.get_object(schema.lower().replace(' ', '-'), "anzeige_pre.csv")
-            csv_data = df_csv.read().decode('utf-8')
-            df = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
-            paragraphs_csv = minio_client.get_object(schema.lower().replace(' ', '-'), "anzeige_paragraphs.csv")
-            csv_data = paragraphs_csv.read().decode('utf-8')
-            paragraphs = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
+                # Loading database tables from csv files
+                df_csv = minio_client.get_object(schema.lower().replace(' ', '-'), "anzeige_pre.csv")
+                csv_data = df_csv.read().decode('utf-8')
+                df = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
+                paragraphs_csv = minio_client.get_object(schema.lower().replace(' ', '-'), "anzeige_paragraphs.csv")
+                csv_data = paragraphs_csv.read().decode('utf-8')
+                paragraphs = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
 
-            # Upload files
-            uploaded_files = st.file_uploader("Datei(en) hochladen", accept_multiple_files=True, type=['csv', 'pdf', 'docx'])
-            if uploaded_files:
-                try:
-                    upload_files(minio_client, schema, uploaded_files)
-                    st.success("Datei(en) erfolgreich hochgeladen.")
-                except S3Error as e:
-                    st.error(f"Error: {e}")
-
-            # Display buckets
-            st.subheader("Dateien")
-            buckets = list_buckets(minio_client)
-            if buckets:
-                # Display objects in selected bucket
-                st.write(f"Objekte in {schema}-Schema")
-                objects = list_objects(minio_client, schema)
-                filtered_objects = [
-                                        object
-                                        for object in objects
-                                        if object.endswith(('.pdf', '.docx'))
-                                    ]
-                selected_object = st.selectbox("Wähle ein Objekt", filtered_objects)
-                if selected_object:
+                # Upload files
+                uploaded_files = st.file_uploader("Datei(en) hochladen", accept_multiple_files=True, type=['csv', 'pdf', 'docx'])
+                if uploaded_files:
                     try:
-                        # Download the selected file and display it
-                        data = minio_client.get_object(schema.lower().replace(' ', '-'), selected_object)
-                        if selected_object.endswith('.pdf'):
-                            pdf_viewer(data.read(), height=800)
-                        if selected_object.endswith('.docx'):
-                            pdf_viewer(convert_docx_to_pdf(data.read()), height=800)
+                        upload_files(minio_client, schema, uploaded_files)
+                        st.success("Datei(en) erfolgreich hochgeladen.")
                     except S3Error as e:
                         st.error(f"Error: {e}")
+
+                # Display buckets
+                st.subheader("Dateien")
+                buckets = list_buckets(minio_client)
+                if buckets:
+                    # Display objects in selected bucket
+                    st.write(f"Objekte in {schema}-Schema")
+                    objects = list_objects(minio_client, schema)
+                    filtered_objects = [
+                                            object
+                                            for object in objects
+                                            if object.endswith(('.pdf', '.docx'))
+                                        ]
+                    selected_object = st.selectbox("Wähle ein Objekt", filtered_objects)
+                    if selected_object:
+                        try:
+                            # Download the selected file and display it
+                            data = minio_client.get_object(schema.lower().replace(' ', '-'), selected_object)
+                            if selected_object.endswith('.pdf'):
+                                pdf_viewer(data.read(), height=800)
+                            if selected_object.endswith('.docx'):
+                                pdf_viewer(convert_docx_to_pdf(data.read()), height=800)
+                        except S3Error as e:
+                            st.error(f"Error: {e}")
+                else:
+                    st.warning("Keine Buckets gefunden.")
             else:
-                st.warning("Keine Buckets gefunden.")
-        else:
-            st.error("Keine Verbindung zum MinIO Data Lake möglich.")
+                st.error("Keine Verbindung zum MinIO möglich.")
+        except S3Error as e:
+            st.error(f"Keine Verbindung zu MinIO möglich: {e}")
 
 # Snowflake connection
 if snowflake:
     with st.expander("Datenbankinhalt"):
         try:
-            # Establish Snowflake session
-            session = create_session()
             if session:
                 st.success("Datenbankverbindung erfolgreich hergestellt.")
                 st.write(f"Streamlit Version: {st.__version__}")
@@ -170,8 +187,10 @@ if snowflake:
                 st.dataframe(paragraphs)
                 #options = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_OPTIONS')
                 #st.dataframe(options)
-        except:
-            st.error("Keine Verbindung zu Snowflake möglich.")
+            else:
+                st.warning("Keine Verbindung zu Snowflake möglich.")
+        except Exception as e:
+            st.error(f"Keine Verbindung zu Snowflake möglich: {e}")
 
 
 # Show ChatBot
