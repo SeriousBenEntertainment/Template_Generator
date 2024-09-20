@@ -128,10 +128,6 @@ def frontend_options(df, schema, minio_client):
         st.write("Bitte wähle die Einstellungen für das Word Dokument aus.")
         template = st.container(border=True)
         with template.container(border=True):
-            st.subheader("Optionen")
-            st.write("Bitte wähle die gewünschten Optionen aus 🔘")
-            st.selectbox("Format", options=["Word"])
-        with template.container(border=True):
             st.subheader("Absätze")
             st.write("Bitte wähle die Absätze aus 📒")
             chapters = st.multiselect("Absätze", options=combined_list, default=combined_list)
