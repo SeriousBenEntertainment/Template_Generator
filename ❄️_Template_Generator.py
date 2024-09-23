@@ -21,7 +21,16 @@ from reportlab.lib.units import inch
 from textwrap import wrap
 sys.path.insert(1, "pages/functions/")
 from Options import frontend_options
+from Template import template_options
 from Functions import connect_to_minio, list_buckets, list_objects, upload_files, create_session, load_data, write_data, export_doc, web_scraper
+
+# Define session states
+if 'options_setup' not in st.session_state:
+    st.session_state.options_setup = False
+if 'combined_list' not in st.session_state:
+    st.session_state['combined_list'] = []
+if 'options' not in st.session_state:
+    st.session_state['options'] = {}
 
 # Define the pages
 pages = {
@@ -197,10 +206,18 @@ if snowflake:
 pg.run()
 
 # Show options
-try:
-    submitted, chapters, table_of_contents, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments, options = frontend_options(df, schema, minio_client)
-
+st.title("Konfiguration")
+#try:
+if not st.session_state['options_setup']:
+    submitted, combined_list, options = frontend_options(df, schema, minio_client)
     if submitted:
+        st.session_state['options_setup'] = True
+        st.session_state['combined_list'] = combined_list
+        st.session_state['options'] = options
+        #print(st.session_state['options'])
+if st.session_state['options_setup']:
+    checked_in, chapters, table_of_contents, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments = template_options(st.session_state['combined_list'], schema, minio_client)
+    if checked_in:
         # Erase previous messages
         st.session_state.pop("langchain_messages", None)
         
@@ -271,9 +288,10 @@ try:
                                 paragraph_info = web_scraper(paragraphs[paragraphs['PARAGRAPH'] == paragraph].drop(columns=paragraphs.columns[:2]).to_string(index=False, header=False))
                                 paragraph_info = paragraph_info.replace('\n', ' ')
                                 prompt += paragraph_info
+                    print(st.session_state['options'])
                     if '<option_' in prompt:
-                        for option in options['DESC']: 
-                            prompt = prompt.replace(f"<{option}>", str(options[options['DESC'] == option].drop(columns=options.columns[:1]).to_string(index=False, header=False)))
+                        for option in st.session_state['options'].get('DESC', []):
+                            prompt = prompt.replace(f"<{option}>", str(st.session_state['options'][st.session_state['options']['DESC'] == option].drop(columns=st.session_state['options'].columns[:1]).to_string(index=False, header=False)))
 
                     st.chat_message("human").write(prompt)
 
@@ -322,6 +340,7 @@ try:
                 st.dataframe(df)
 
         # Export to Word
-        export_doc(anzeige_temp, cloud, service_1, service_2, last_chapter, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments, table_of_contents)
-except:
-    st.error("Keine Konfiguration geladen.")
+        export_doc(anzeige_temp, cloud, last_chapter, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments, table_of_contents)
+        st.session_state['options_setup'] = False
+#except:
+#    st.error("Keine Konfiguration geladen.")

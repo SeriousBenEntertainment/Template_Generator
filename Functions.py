@@ -99,7 +99,7 @@ def web_scraper(url):
     return info
 
 # Word export
-def export_doc(data, cloud, service_1, service_2, last_chapter, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments, table_of_contents):
+def export_doc(data, cloud, last_chapter, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments, table_of_contents):
     document = Document()
 
     # Adding Image
@@ -108,9 +108,6 @@ def export_doc(data, cloud, service_1, service_2, last_chapter, paragraph_of_sum
     # Adding centered text
     centered_text = f"""\n\n\n
                         {cloud} 
-                        inkl.
-                        {service_1}
-                        {service_2}
                         \n\n
                         Anforderungen 
                         Regulatorik
