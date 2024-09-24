@@ -75,8 +75,8 @@ with sidebar:
             #    account=st.secrets.snowflake["account"],
             #    passcode_in_password=False
             #)
-    except Exception as e:
-        st.error(f"Keine Verbindung zu Snowflake möglich: {e}")
+        except Exception as e:
+            st.error(f"Keine Verbindung zu Snowflake möglich: {e}")
     try:
         kunde = st.text_input("Kunde:", value=presets['DEFAULT'][presets['OPTION'] == 'Kunde'].to_string(index=False))
         web = st.toggle("Webscraper", value=eval(presets['DEFAULT'][presets['OPTION'] == 'Webscraper'].to_string(index=False)))
