@@ -14,6 +14,8 @@ from langchain_community.chat_message_histories import StreamlitChatMessageHisto
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_openai import ChatOpenAI
+from snowflake.snowpark import Session
+from snowflake.connector import connect
 from docx import Document
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -47,7 +49,7 @@ sidebar = st.sidebar
 with sidebar:
     st.subheader("Template Generator")
     st.image('images/header.png', width=200)
-    minio = st.toggle("MinIO", True)
+    minio = st.toggle("MinIO", False)
     if minio:
         try:
             # Establish MinIO session
@@ -62,13 +64,19 @@ with sidebar:
             presets = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
         except S3Error as e:
             st.error(f"Keine Verbindung zu MinIO möglich: {e}")
-    snowflake = st.toggle("Snowflake", False)
+    snowflake = st.toggle("Snowflake", True)
     if snowflake:
         try:
             # Establish Snowflake session
-            session = create_session()
-        except Exception as e:
-            st.error(f"Keine Verbindung zu Snowflake möglich: {e}")
+            session = Session.builder.configs(st.secrets.snowflake).create()#create_session()
+            #connection = connect(
+            #    user=st.secrets.snowflake["user"],
+            #    password=st.secrets.snowflake["password"],
+            #    account=st.secrets.snowflake["account"],
+            #    passcode_in_password=False
+            #)
+    except Exception as e:
+        st.error(f"Keine Verbindung zu Snowflake möglich: {e}")
     try:
         kunde = st.text_input("Kunde:", value=presets['DEFAULT'][presets['OPTION'] == 'Kunde'].to_string(index=False))
         web = st.toggle("Webscraper", value=eval(presets['DEFAULT'][presets['OPTION'] == 'Webscraper'].to_string(index=False)))
