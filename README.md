@@ -44,15 +44,6 @@ brew install snowflake-cli
 python -m pip install --upgrade --force-reinstall snowflake-cli-labs
 ```
 
-### Snowflake CLI
-
-To use the Snowflake CLI, use the following commands
-
-```bash
-# Snowflake CLI
-snowsql -a sv04740.west-europe.azure.snowflakecomputing.com -u bengross_tech -o log_level=DEBUG
-```
-
 ### Snowflake Native App
 
 Run the [Snowflake native app](https://app.snowflake.com/FFCJEQR/pk52190/#/apps/application/OPENAI_BENJAMINGROSS1).
