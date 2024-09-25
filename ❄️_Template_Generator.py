@@ -15,7 +15,8 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_openai import ChatOpenAI
 from snowflake.snowpark import Session
-from snowflake.connector import connect
+from snowflake.snowpark.types import *
+import pandas as pd
 from docx import Document
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -68,13 +69,22 @@ with sidebar:
     if snowflake:
         try:
             # Establish Snowflake session
-            session = Session.builder.configs(st.secrets.snowflake).create()#create_session()
-            #connection = connect(
-            #    user=st.secrets.snowflake["user"],
-            #    password=st.secrets.snowflake["password"],
-            #    account=st.secrets.snowflake["account"],
-            #    passcode_in_password=False
-            #)
+            #session = Session.builder.configs(st.secrets.snowflake).create()
+            #create_session()
+            connection_parameters = {
+                "account": "sv04740.west-europe.azure",
+                "user": "bengross_tech",
+                "role": "ACCOUNTADMIN",
+                "private_key_file": "C:\\Users\\120700002024\\.snowflake\\rsa_key.p8",
+                "private_key_passphrase": None,
+                "password" : None,
+                "warehouse": "WH_Health_UseCase_AI",
+                "database": "DB_BG_HEALTH",
+                "schema": "PUBLIC",
+                "authenticator": "SNOWFLAKE_JWT",
+                "socket_timeout": 300
+            }
+            session = Session.builder.configs(connection_parameters).create()
         except Exception as e:
             st.error(f"Keine Verbindung zu Snowflake möglich: {e}")
     try:
