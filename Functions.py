@@ -73,10 +73,10 @@ def upload_files(minio_client, bucket_name, files):
 def create_session():
     session = Session.builder.configs(st.secrets.snowflake).create()
     try:
-        session.use_role(st.secrets.snowflake["default_role"])
+        session.use_role(st.secrets.snowflake["role"])
         session.use_warehouse("COMPUTE_WH") #st.secrets.snowflake["default_warehouse"]
-        session.use_database(st.secrets.snowflake["default_database"])
-        session.use_schema(st.secrets.snowflake["default_schema"])
+        session.use_database(st.secrets.snowflake["database"])
+        session.use_schema(st.secrets.snowflake["schema"])
     except Exception as e:
         st.error(f"Error: {e}")
     return session
