@@ -8,6 +8,12 @@ from streamlit_pdf_viewer import pdf_viewer
 import pandas as pd
 pd.set_option('display.max_colwidth', None)
 import sys
+import warnings
+warnings.filterwarnings(
+    action='ignore',
+    category=UserWarning,
+    module='snowflake.connector'
+)
 from io import StringIO, BytesIO
 from minio.error import S3Error
 from langchain_community.chat_message_histories import StreamlitChatMessageHistory

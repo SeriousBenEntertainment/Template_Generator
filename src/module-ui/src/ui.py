@@ -59,13 +59,13 @@ def run_streamlit():
             port = st.number_input("Port:", value=1234, min_value=1, max_value=65535)
         
     # Header
-    st.title('❄️ BAS Anzeigen Generator')
-    st.header('Generiere ein BAS Anzeigen Dokument')
+    st.title('❄️ Template Generator')
+    st.header('Generiere ein Template Dokument')
     st.write(f"Python Version: {sys.version}")
     st.write(f"Streamlit Version: {st.__version__}")
     
     # Select and display data table
-    table_name = "OPENAI_DATABASE.PUBLIC.ANZEIGE_PRE"
+    table_name = "DB_BG_HEALTH.PUBLIC.ANZEIGE_PRE"
 
     # Display data table
     with st.expander("Datenbankinhalt"):
