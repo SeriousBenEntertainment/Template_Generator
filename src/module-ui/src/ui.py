@@ -1,81 +1,45 @@
 def run_streamlit():
-    ##### `ui.py`
-    ##### BAS Anzeigen Generator
-    ##### Please reach out to drdrbenjamin@icloud.com for any questions
-    #### Loading needed Python libraries
-    import streamlit as st
-    import pandas as pd
-    import sys
-    from snowflake.snowpark.functions import call_udf, col
-    from snowflake.snowpark.context import get_active_session
+   # Import python packages
+   # Streamlit app testing framework requires imports to reside here
+   # Streamlit app testing documentation: https://docs.streamlit.io/library/api-reference/app-testing
+   import pandas as pd
+   import streamlit as st
+   from snowflake.snowpark.functions import call_udf, col
+   from snowflake.snowpark import Session
 
-    # Get the current credentials
-    session = get_active_session()
-    st.success("Datenbankverbindung erfolgreich hergestellt.")
-    
-    # Load data table
-    @st.cache_data
-    def load_data(table_name):
-        # Read in data table
-        st.write(f"Beispieldaten von `{table_name}`:")
-        table = session.table(table_name)
-    
-        # Do some computation on it
-        table = table.limit(100)
-        
-        # Collect the results. This will run the query and download the data
-        table = table.collect()
-        st.success("Daten erfolgreich gelesen.")
-        return pd.DataFrame(table)
-      
-    def write_data(table_name):
-        # Write data to table
-        data = pd.DataFrame(
-                            {
-                              "PRAGRAPGH": ["1.0"],
-                              "PARAGRAPH_TEXT": ["Die GWQ ServicePlus AG (GWQ) ist ein Dienstleister an der Schnittstelle zwischen Krankenkassen und den Erbringern medizinischer Versorgung."]
-                            }
-                           )
-        session.write_pandas(data, table_name, auto_create_table=True)
-        st.success("Daten erfolgreich geschrieben.")
+   st.title('Hello Snowflake!')
+   st.header('UDF Example')
+   st.write(
+      """The sum of the two numbers is calculated by the Python add_fn() function
+         which is called from core.add() UDF defined in your setup_script.sql.
+      """)
 
-    # Sidebar
-    sidebar = st.sidebar
-    with sidebar:
-        st.markdown("Einstellungen")
-        kunde = st.text_input("Anbieter:", value="GWQ ServicePlus AG")
-        cloud = st.selectbox("Cloud:", ["AWS", "Azure", "Google Cloud"], index=2)
-        on = st.toggle("OpenAI ChatGPT", True)
-        system = st.text_input("System:", value = f"Du erstellst einzelne Absätze einer Anzeige beim Bundesamt für Soziale Sicherung über die Verarbeitung von Sozialdaten im Auftrag (AVV) nach § 80 Zehntes Sozialgesetzbuch (SGB X). Tausche <Variabel_Name> durch die entsprechenden Inhalte aus und gebe nur den Text aus und verzichte auf Phrasen wie z.B. 'Vielen Dank für die Informationen. Hier sind die angepassten Absätze für die Anzeige beim Bundesamt für Soziale Sicherung:'.")
-        token = ""
-        if on:
-            st.markdown("OpenAI API Konfiguration")
-            token = st.text_input("Token:", value="sk-")
-        url = ""
-        port = ""
-        if not on:
-            st.markdown("Lokaler Server Konfiguration")
-            url = st.text_input("URL:", value="http://localhost")
-            port = st.number_input("Port:", value=1234, min_value=1, max_value=65535)
-        
-    # Header
-    st.title('❄️ Template Generator')
-    st.header('Generiere ein Template Dokument')
-    st.write(f"Python Version: {sys.version}")
-    st.write(f"Streamlit Version: {st.__version__}")
-    
-    # Select and display data table
-    table_name = "DB_BG_HEALTH.PUBLIC.ANZEIGE_PRE"
+   # Get the current credentials
+   session = Session.builder.getOrCreate()
 
-    # Display data table
-    with st.expander("Datenbankinhalt"):
-        df = load_data(table_name)
-        st.dataframe(df)
+   num1 = st.number_input('First number', key='numToAdd1', value=1)
+   num2 = st.number_input('Second number', key='numToAdd2', value=1)
 
-    # Generator
-    data_frame = session.create_dataframe([[]]).select(call_udf('core.add', kunde, cloud, system, on, token, url, port).alias('RESULT'))
-    output = data_frame.to_pandas()
-    st.write(f"UDF Ausgabe: {output['RESULT'][0]}")
+   #  Create an example data frame
+   data_frame = session.create_dataframe([[num1, num2]], schema=['num1', 'num2'])
+   data_frame = data_frame.select(call_udf('core.add', col('num1'), col('num2')))
+
+   # Execute the query and convert it into a Pandas data frame
+   queried_data = data_frame.to_pandas()
+
+   # Display the Pandas data frame as a Streamlit data frame.
+   st.dataframe(queried_data, use_container_width=True)
+
+   st.header('Stored Procedure Example')
+   st.write(
+      """Incrementing a number by one is calculated by the Python increment_by_one_fn() function
+         which implements the core.increment_by_one() Stored Procedure defined in your setup_script.sql.
+      """)
+
+   num_to_increment = st.number_input('Number to increment', key='numToIncrement', value=1)
+   result = session.call('core.increment_by_one', num_to_increment)
+
+   st.dataframe(pd.DataFrame([[result]]), use_container_width=True)
 
 if __name__ == '__main__':
-    run_streamlit()
+   run_streamlit()

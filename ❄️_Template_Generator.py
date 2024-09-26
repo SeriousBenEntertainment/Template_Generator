@@ -20,7 +20,8 @@ from langchain_community.chat_message_histories import StreamlitChatMessageHisto
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_openai import ChatOpenAI
-from snowflake.snowpark import Session
+#from snowflake.core.stage import StageCollection
+#from snowflake.core import Root
 from snowflake.snowpark.types import *
 import pandas as pd
 from docx import Document
@@ -75,22 +76,17 @@ with sidebar:
     if snowflake:
         try:
             # Establish Snowflake session
-            #session = Session.builder.configs(st.secrets.snowflake).create()
-            #create_session()
-            connection_parameters = {
-                "account": "sv04740.west-europe.azure",
-                "user": "bengross_tech",
-                "role": "ACCOUNTADMIN",
-                "private_key_file": "C:\\Users\\120700002024\\.snowflake\\rsa_key.p8",
-                "private_key_passphrase": None,
-                "password" : None,
-                "warehouse": "WH_Health_UseCase_AI",
-                "database": "DB_BG_HEALTH",
-                "schema": "PUBLIC",
-                "authenticator": "SNOWFLAKE_JWT",
-                "socket_timeout": 300
-            }
-            session = Session.builder.configs(connection_parameters).create()
+            session = create_session()
+            
+            # Select Schema
+            #root = Root(session)
+            #stages: StageCollection = root.databases[st.secrets.snowflake["default_database"]].schemas[st.secrets.snowflake["default_schema"]].stages
+            #stage_iter = stages.iter(like="my%")  # returns a PagedIter[Stage]
+            schema = st.selectbox("Wähle die passende Konfiguration", options="Google Cloud") #_list_files_in_stage("@GOOGLE_CLOUD"))
+            
+            # Importing Schema
+            _ = session.file.get("@GOOGLE_CLOUD/presets.csv", "db")
+            presets = pd.read_csv("db/presets.csv", quotechar="'", delimiter=',')
         except Exception as e:
             st.error(f"Keine Verbindung zu Snowflake möglich: {e}")
     try:
@@ -214,12 +210,14 @@ if snowflake:
                 st.write(f"Streamlit Version: {st.__version__}")
                 st.write(f"Python Version: {sys.version}")
 
-                df = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_PRE')
+                df = load_data(session, 'DB_BG_HEALTH.PUBLIC.ANZEIGE_PRE')
                 st.dataframe(df)
-                paragraphs = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_PARAGRAPHS')
-                st.dataframe(paragraphs)
+                #paragraphs = load_data(session, 'DB_BG_HEALTH.PUBLIC.ANZEIGE_PARAGRAPHS')
+                #st.dataframe(paragraphs)
                 #options = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_OPTIONS')
-                #st.dataframe(options)
+                _ = session.file.get("@GOOGLE_CLOUD/options.csv", "db")
+                options = pd.read_csv("db/options.csv", quotechar="'", delimiter=',')
+                st.dataframe(options)
             else:
                 st.warning("Keine Verbindung zu Snowflake möglich.")
         except Exception as e:
@@ -233,7 +231,10 @@ pg.run()
 st.title("Konfiguration")
 #try:
 if not st.session_state['options_setup']:
-    submitted, combined_list, options = frontend_options(df, schema, minio_client)
+    if minio:
+        submitted, combined_list, options = frontend_options(df, schema, minio_client)
+    else:
+        submitted, combined_list, options = frontend_options(df, schema, session)
     if submitted:
         st.session_state['options_setup'] = True
         st.session_state['combined_list'] = combined_list

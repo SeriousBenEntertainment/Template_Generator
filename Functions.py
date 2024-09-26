@@ -71,7 +71,15 @@ def upload_files(minio_client, bucket_name, files):
 # Establish Snowflake session
 @st.cache_resource
 def create_session():
-    return Session.builder.configs(st.secrets.snowflake).create()
+    session = Session.builder.configs(st.secrets.snowflake).create()
+    try:
+        session.use_role(st.secrets.snowflake["default_role"])
+        session.use_warehouse("COMPUTE_WH") #st.secrets.snowflake["default_warehouse"]
+        session.use_database(st.secrets.snowflake["default_database"])
+        session.use_schema(st.secrets.snowflake["default_schema"])
+    except Exception as e:
+        st.error(f"Error: {e}")
+    return session
 
 # Write data table
 def write_data(session, data, table_name, database, schema):
@@ -81,9 +89,9 @@ def write_data(session, data, table_name, database, schema):
 
 # Load data table
 @st.cache_data
-def load_data(session, table_name):
+def load_data(_session, table_name):
     # Read in data table
-    table = session.table(table_name)
+    table = _session.table(table_name)
 
     # Collect the results. This will run the query and download the data
     table = table.collect()
