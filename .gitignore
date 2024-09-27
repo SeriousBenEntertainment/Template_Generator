@@ -5,6 +5,8 @@ output/
 create_secret.sql
 .streamlit/secrets.toml
 .streamlit/config.toml
+db/*.csv
+db/*.pdf
 data/dialogues_original.parquet
 data/dialogues.parquet
 .DS_Store

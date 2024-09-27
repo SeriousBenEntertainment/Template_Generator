@@ -20,8 +20,6 @@ from langchain_community.chat_message_histories import StreamlitChatMessageHisto
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_openai import ChatOpenAI
-#from snowflake.core.stage import StageCollection
-#from snowflake.core import Root
 from snowflake.snowpark.types import *
 from snowflake.snowpark.files import SnowflakeFile
 import pandas as pd
@@ -33,7 +31,7 @@ from textwrap import wrap
 sys.path.insert(1, "pages/functions/")
 from Options import frontend_options
 from Template import template_options
-from Functions import connect_to_minio, list_buckets, list_objects, upload_files, create_session, load_data, write_data, export_doc, web_scraper
+from Functions import connect_to_minio, list_buckets, list_objects, upload_files, create_session, list_files, load_data, write_data, export_doc, web_scraper
 
 # Define session states
 if 'options_setup' not in st.session_state:
@@ -80,9 +78,6 @@ with sidebar:
             session = create_session()
             
             # Select Schema
-            #root = Root(session)
-            #stages: StageCollection = root.databases[st.secrets.snowflake["default_database"]].schemas[st.secrets.snowflake["default_schema"]].stages
-            #stage_iter = stages.iter(like="my%")  # returns a PagedIter[Stage]
             schema = st.selectbox("Wähle die passende Konfiguration", options="Google Cloud") #_list_files_in_stage("@GOOGLE_CLOUD"))
             
             # Importing Schema
@@ -179,29 +174,30 @@ if minio:
 
                 # Display buckets
                 st.subheader("Dateien")
-                buckets = list_buckets(minio_client)
-                if buckets:
-                    # Display objects in selected bucket
-                    st.write(f"Objekte in {schema}-Schema")
-                    objects = list_objects(minio_client, schema)
-                    filtered_objects = [
-                                            object
-                                            for object in objects
-                                            if object.endswith(('.pdf', '.docx'))
-                                        ]
-                    selected_object = st.selectbox("Wähle ein Objekt", filtered_objects)
-                    if selected_object:
-                        try:
-                            # Download the selected file and display it
-                            data = minio_client.get_object(schema.lower().replace(' ', '-'), selected_object)
-                            if selected_object.endswith('.pdf'):
-                                pdf_viewer(data.read(), height=800)
-                            if selected_object.endswith('.docx'):
-                                pdf_viewer(convert_docx_to_pdf(data.read()), height=800)
-                        except S3Error as e:
-                            st.error(f"Error: {e}")
-                else:
-                    st.warning("Keine Buckets gefunden.")
+                #buckets = list_buckets(minio_client)
+                #if buckets:
+                # Display objects in selected bucket
+                st.write(f"Objekte in {schema}-Schema")
+                objects = list_objects(minio_client, schema)
+                filtered_objects = [
+                                        object
+                                        for object in objects
+                                        if object.endswith(('.pdf', '.docx'))
+                                    ]
+                selected_object = st.selectbox("Wähle ein Objekt", filtered_objects)
+                if selected_object:
+                    try:
+                        # Download the selected file and display it
+                        data = minio_client.get_object(schema.lower().replace(' ', '-'), selected_object)
+                        if selected_object.endswith('.pdf'):
+                            pdf_content = data.read()
+                        if selected_object.endswith('.docx'):
+                            pdf_content = convert_docx_to_pdf(data.read())
+                        pdf_viewer(pdf_content, height=800)
+                    except S3Error as e:
+                        st.error(f"Error: {e}")
+                #else:
+                #    st.warning("Keine Buckets gefunden.")
             else:
                 st.error("Keine Verbindung zum MinIO möglich.")
         except S3Error as e:
@@ -220,8 +216,34 @@ if snowflake:
                 st.dataframe(df)
                 paragraphs = load_data(session, 'DB_BG_HEALTH.PUBLIC.ANZEIGE_PARAGRAPHS')
                 st.dataframe(paragraphs)
-            else:
-                st.warning("Keine Verbindung zu Snowflake möglich.")
+                
+                # Display buckets
+                st.subheader("Dateien")
+                
+                # Display objects in selected bucket
+                st.write(f"Objekte in {schema}-Schema")
+                objects = list_files(session, schema)
+                filtered_objects = [
+                                        object
+                                        for object in objects
+                                        if object.endswith(('.pdf', '.docx'))
+                                    ]
+                selected_object = st.selectbox("Wähle ein Objekt", filtered_objects)
+                if selected_object:
+                    try:
+                        # Download the selected file and display it
+                        _ = session.file.get(f"@{schema.upper().replace(' ', '_')}/{selected_object}", "db")
+                        data = open(f"db/{selected_object}", "rb")
+                        if selected_object.endswith('.pdf'):
+                            pdf_content = data.read()
+                        if selected_object.endswith('.docx'):
+                            pdf_content = convert_docx_to_pdf(data.read())
+                        pdf_viewer(pdf_content, height=800)
+                            
+                    except S3Error as e:
+                        st.error(f"Error: {e}")
+                else:
+                    st.warning("Keine Verbindung zu Snowflake möglich.")
         except Exception as e:
             st.error(f"Keine Verbindung zu Snowflake möglich: {e}")
 
