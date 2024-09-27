@@ -61,6 +61,7 @@ def upload_files(minio_client, bucket_name, files):
     for file in files:
         # Read file
         file_content = file.read()
+        
         # Upload to MinIO
         minio_client.put_object(
             bucket_name,
@@ -88,6 +89,19 @@ def write_data(session, data, table_name, database, schema):
     session.write_pandas(data, table_name=table_name, database=database, schema=schema, overwrite=True)
     st.success("Daten erfolgreich geschrieben.")
 
+def uploading_files(session, stage_name, files):
+    for file in files:
+        # Read file(s)
+        file_content = file.read()
+        
+        # Upload to Snowflake
+        session.file.put_stream(
+            BytesIO(file_content),
+            f"{stage_name.replace(' ', '_')}/{file.name}",
+            auto_compress=False,
+            overwrite=True,
+        )
+        
 # Load data table
 @st.cache_data
 def load_data(_session, table_name):

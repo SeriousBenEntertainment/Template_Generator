@@ -31,7 +31,7 @@ from textwrap import wrap
 sys.path.insert(1, "pages/functions/")
 from Options import frontend_options
 from Template import template_options
-from Functions import connect_to_minio, list_buckets, list_objects, upload_files, create_session, list_files, load_data, write_data, export_doc, web_scraper
+from Functions import connect_to_minio, list_buckets, list_objects, upload_files, create_session, list_files, load_data, write_data, uploading_files, export_doc, web_scraper
 
 # Define session states
 if 'options_setup' not in st.session_state:
@@ -163,7 +163,8 @@ if minio:
                 csv_data = paragraphs_csv.read().decode('utf-8')
                 paragraphs = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
 
-                # Upload files
+                #Files
+                st.subheader("Dateien")
                 uploaded_files = st.file_uploader("Datei(en) hochladen", accept_multiple_files=True, type=['csv', 'pdf', 'docx'])
                 if uploaded_files:
                     try:
@@ -171,9 +172,6 @@ if minio:
                         st.success("Datei(en) erfolgreich hochgeladen.")
                     except S3Error as e:
                         st.error(f"Error: {e}")
-
-                # Display buckets
-                st.subheader("Dateien")
                 #buckets = list_buckets(minio_client)
                 #if buckets:
                 # Display objects in selected bucket
@@ -217,10 +215,15 @@ if snowflake:
                 paragraphs = load_data(session, 'DB_BG_HEALTH.PUBLIC.ANZEIGE_PARAGRAPHS')
                 st.dataframe(paragraphs)
                 
-                # Display buckets
+                # Files
                 st.subheader("Dateien")
-                
-                # Display objects in selected bucket
+                uploaded_files = st.file_uploader("Datei(en) hochladen", accept_multiple_files=True, type=['csv', 'pdf', 'docx'])
+                if uploaded_files:
+                    try:
+                        uploading_files(session, schema, uploaded_files)
+                        st.success("Datei(en) erfolgreich hochgeladen.")
+                    except S3Error as e:
+                        st.error(f"Error: {e}")
                 st.write(f"Objekte in {schema}-Schema")
                 objects = list_files(session, schema)
                 filtered_objects = [
@@ -232,8 +235,7 @@ if snowflake:
                 if selected_object:
                     try:
                         # Download the selected file and display it
-                        _ = session.file.get(f"@{schema.upper().replace(' ', '_')}/{selected_object}", "db")
-                        data = open(f"db/{selected_object}", "rb")
+                        data = session.file.get_stream(f"@{schema.upper().replace(' ', '_')}/{selected_object}")
                         if selected_object.endswith('.pdf'):
                             pdf_content = data.read()
                         if selected_object.endswith('.docx'):
