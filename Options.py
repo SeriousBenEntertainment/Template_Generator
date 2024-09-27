@@ -7,10 +7,12 @@ import streamlit as st
 import pandas as pd
 import ast
 from io import StringIO
-from Functions import list_objects
+from Functions import list_objects, list_files
+from snowflake.snowpark.session import Session
+from minio import Minio
 
 # Options content
-def frontend_options(df, schema, minio_client):
+def frontend_options(df, schema, client):
     # Decrypting the dataframe
     paragraph_list = df["PARAGRAPH"].tolist()
     paragraph_title_list = df["PARAGRAPH_TITLE"].tolist()
@@ -19,9 +21,15 @@ def frontend_options(df, schema, minio_client):
                         for p, t in zip(paragraph_list, paragraph_title_list)
                     ]
     # Importing options
-    options_csv = minio_client.get_object(schema.lower().replace(' ', '-'), "options.csv")
-    csv_data = options_csv.read().decode('utf-8')
-    options = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
+    if client is not None:
+        if isinstance(client, Session):
+            options_csv = client.read.options({"FIELD_DELIMITER": ",", "FIELD_OPTIONALLY_ENCLOSED_BY": "'", "SKIP_HEADER": 1}).csv("@GOOGLE_CLOUD/options.csv")
+            options = options_csv.to_pandas()
+            options.columns = ["QUESTION", "TYPE", "DEFAULT", "CHAPTER_PARAGRAPH"]
+        if isinstance(client, Minio):
+            options_csv = client.get_object(schema.lower().replace(' ', '-'), "options.csv")
+            csv_data = options_csv.read().decode('utf-8')
+            options = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
     with st.form("Form_Options"):
         st.write("Bitte fülle die folgenden Felder aus, um bestmöglich ein Template generieren zu können.")
         st.header("Optionen")
@@ -31,7 +39,11 @@ def frontend_options(df, schema, minio_client):
         options_output = pd.DataFrame(columns=["ANSWER", "PARAGRAPH", "FILES"])
         i, x, y, key = -1, 0, -1, 0
         cont, cont_y = [], []
-        file_names = list_objects(minio_client, "templategenerator")
+        if isinstance(client, Session):
+            file_names = list_files(client, schema)
+            print("Files: ", file_names)
+        if isinstance(client, Minio):
+            file_names = list_objects(client, schema)
         file_names = [
                         file 
                         for file in file_names 

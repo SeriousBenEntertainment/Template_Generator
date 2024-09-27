@@ -23,6 +23,7 @@ from langchain_openai import ChatOpenAI
 #from snowflake.core.stage import StageCollection
 #from snowflake.core import Root
 from snowflake.snowpark.types import *
+from snowflake.snowpark.files import SnowflakeFile
 import pandas as pd
 from docx import Document
 from reportlab.lib.pagesizes import letter
@@ -85,8 +86,13 @@ with sidebar:
             schema = st.selectbox("Wähle die passende Konfiguration", options="Google Cloud") #_list_files_in_stage("@GOOGLE_CLOUD"))
             
             # Importing Schema
-            _ = session.file.get("@GOOGLE_CLOUD/presets.csv", "db")
-            presets = pd.read_csv("db/presets.csv", quotechar="'", delimiter=',')
+            csv_data = session.read.options({"FIELD_DELIMITER": ",", "FIELD_OPTIONALLY_ENCLOSED_BY": "'", "SKIP_HEADER": 1}).csv("@GOOGLE_CLOUD/presets.csv")
+            presets = csv_data.to_pandas()
+            presets.columns = ["OPTION", "DEFAULT"]
+            # Use in UDF
+            #with SnowflakeFile.open("@GOOGLE_CLOUD/presets.csv", 'rb') as f:
+            #    presets = pd.read_csv(f, dtype=str)
+                
         except Exception as e:
             st.error(f"Keine Verbindung zu Snowflake möglich: {e}")
     try:
@@ -232,14 +238,15 @@ st.title("Konfiguration")
 #try:
 if not st.session_state['options_setup']:
     if minio:
+        print("Minio")
         submitted, combined_list, options = frontend_options(df, schema, minio_client)
-    else:
+    if snowflake:
+        print("Snowflake")
         submitted, combined_list, options = frontend_options(df, schema, session)
     if submitted:
         st.session_state['options_setup'] = True
         st.session_state['combined_list'] = combined_list
         st.session_state['options'] = options
-        #print(st.session_state['options'])
 if st.session_state['options_setup']:
     checked_in, chapters, table_of_contents, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments = template_options(st.session_state['combined_list'], schema, minio_client)
     if checked_in:
@@ -313,7 +320,6 @@ if st.session_state['options_setup']:
                                 paragraph_info = web_scraper(paragraphs[paragraphs['PARAGRAPH'] == paragraph].drop(columns=paragraphs.columns[:2]).to_string(index=False, header=False))
                                 paragraph_info = paragraph_info.replace('\n', ' ')
                                 prompt += paragraph_info
-                    print(st.session_state['options'])
                     if '<option_' in prompt:
                         for option in st.session_state['options'].get('DESC', []):
                             prompt = prompt.replace(f"<{option}>", str(st.session_state['options'][st.session_state['options']['DESC'] == option].drop(columns=st.session_state['options'].columns[:1]).to_string(index=False, header=False)))

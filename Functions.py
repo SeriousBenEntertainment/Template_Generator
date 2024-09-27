@@ -7,6 +7,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 import requests
+import os
 from io import BytesIO
 from bs4 import BeautifulSoup
 from docx import Document
@@ -97,6 +98,18 @@ def load_data(_session, table_name):
     table = table.collect()
     st.success("Daten erfolgreich gelesen.")
     return pd.DataFrame(table)
+
+# Function to list objects in a Stage
+def list_files(session, stage_name):
+    try:
+        files = session.sql("LIST @GOOGLE_CLOUD/;").collect()
+        return [
+                    os.path.basename(file.name)
+                    for file in files
+                ]
+    except S3Error as e:
+        st.error(f"Error: {e}")
+    return
 
 # Web Scraper
 def web_scraper(url):
