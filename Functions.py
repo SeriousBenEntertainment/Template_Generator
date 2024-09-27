@@ -102,7 +102,8 @@ def load_data(_session, table_name):
 # Function to list objects in a Stage
 def list_files(session, stage_name):
     try:
-        files = session.sql("LIST @GOOGLE_CLOUD/;").collect()
+        query = f"LIST @{stage_name.replace(' ', '_')}/;"
+        files = session.sql(query).collect()
         return [
                     os.path.basename(file.name)
                     for file in files

@@ -41,7 +41,6 @@ def frontend_options(df, schema, client):
         cont, cont_y = [], []
         if isinstance(client, Session):
             file_names = list_files(client, schema)
-            print("Files: ", file_names)
         if isinstance(client, Minio):
             file_names = list_objects(client, schema)
         file_names = [
@@ -131,7 +130,6 @@ def frontend_options(df, schema, client):
                     options_output = options_output._append({"ANSWER": answer, "PARAGRAPH": paragraph, "FILES": files}, ignore_index=True)
                 else:
                     options_output = options_output._append({"ANSWER": answer, "PARAGRAPH": paragraph, "FILES": []}, ignore_index=True)
-        #print(options_output)
 
         # Submit button
         submitted = st.form_submit_button("Optionen einchecken")

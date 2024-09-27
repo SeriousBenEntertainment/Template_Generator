@@ -5,10 +5,12 @@
 ### Loading needed Python libraries
 import streamlit as st
 import pandas as pd
-from Functions import list_objects
+from Functions import list_objects, list_files
+from minio import Minio
+from snowflake.snowpark import Session
 
 # Template generation content
-def template_options(combined_list, schema, minio_client):
+def template_options(combined_list, schema, client):
     with st.form("Form_Template"):
         st.header("Template")
         st.write("Bitte wähle die Einstellungen für das Word Dokument aus.")
@@ -20,7 +22,10 @@ def template_options(combined_list, schema, minio_client):
             with st.expander("Zusätzliche Informationen", expanded=False):
                 st.subheader("Auswahl zusätzlicher Informationen")
                 st.write("Wähle zusätzliche Informationen zum jeweiligen Absatz aus")
-                file_names = list_objects(minio_client, schema.lower().replace(' ', '-'))
+                if isinstance(client, Session):
+                    file_names = list_files(client, schema)
+                if isinstance(client, Minio):
+                    file_names = list_objects(client, schema)
                 x = 0
                 for chapter in chapters:
                     st.write(chapter)

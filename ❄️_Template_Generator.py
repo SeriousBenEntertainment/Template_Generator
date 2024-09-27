@@ -218,12 +218,8 @@ if snowflake:
 
                 df = load_data(session, 'DB_BG_HEALTH.PUBLIC.ANZEIGE_PRE')
                 st.dataframe(df)
-                #paragraphs = load_data(session, 'DB_BG_HEALTH.PUBLIC.ANZEIGE_PARAGRAPHS')
-                #st.dataframe(paragraphs)
-                #options = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_OPTIONS')
-                _ = session.file.get("@GOOGLE_CLOUD/options.csv", "db")
-                options = pd.read_csv("db/options.csv", quotechar="'", delimiter=',')
-                st.dataframe(options)
+                paragraphs = load_data(session, 'DB_BG_HEALTH.PUBLIC.ANZEIGE_PARAGRAPHS')
+                st.dataframe(paragraphs)
             else:
                 st.warning("Keine Verbindung zu Snowflake möglich.")
         except Exception as e:
@@ -238,17 +234,18 @@ st.title("Konfiguration")
 #try:
 if not st.session_state['options_setup']:
     if minio:
-        print("Minio")
         submitted, combined_list, options = frontend_options(df, schema, minio_client)
     if snowflake:
-        print("Snowflake")
         submitted, combined_list, options = frontend_options(df, schema, session)
     if submitted:
         st.session_state['options_setup'] = True
         st.session_state['combined_list'] = combined_list
         st.session_state['options'] = options
 if st.session_state['options_setup']:
-    checked_in, chapters, table_of_contents, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments = template_options(st.session_state['combined_list'], schema, minio_client)
+    if minio:
+        checked_in, chapters, table_of_contents, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments = template_options(st.session_state['combined_list'], schema, minio_client)
+    if snowflake:
+        checked_in, chapters, table_of_contents, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments = template_options(st.session_state['combined_list'], schema, session)
     if checked_in:
         # Erase previous messages
         st.session_state.pop("langchain_messages", None)
@@ -364,10 +361,10 @@ if st.session_state['options_setup']:
 
         st.dataframe(anzeige_temp)
         if snowflake:
-            write_data(session, anzeige_temp, table_name='ANZEIGE_TEMP', database='OPENAI_DATABASE', schema='PUBLIC')
+            write_data(session, anzeige_temp, table_name='ANZEIGE_TEMP', database=st.secrets.snowflake['database'], schema=st.secrets.snowflake['schema'])
         with st.expander("Datenbankinhalt", expanded=False):
             if snowflake:
-                df = load_data(session, 'OPENAI_DATABASE.PUBLIC.ANZEIGE_TEMP')
+                df = load_data(session, f"{st.secrets.snowflake['database']}.{st.secrets.snowflake['schema']}.ANZEIGE_TEMP")
                 st.dataframe(df)
 
         # Export to Word
