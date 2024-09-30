@@ -48,6 +48,10 @@ python -m pip install --upgrade --force-reinstall snowflake-cli-labs
 
 Run the [Snowflake native app](https://app.snowflake.com/FFCJEQR/pk52190/#/apps/application/OPENAI_BENJAMINGROSS1).
 
+### Snowflake Cortex AI
+
+[Quickstart Guide](https://quickstarts.snowflake.com/guide/getting_started_with_synthetic_data_and_distillation_for_llms/#0).
+
 ## MinIO Data Lake
 
 To use the [MinIO](https://min.io/download?license=agpl&platform=docker) in Python install the MinIO Client with

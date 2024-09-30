@@ -217,3 +217,95 @@ SHOW STAGES;
 // List Files in Stage
 SELECT DISTINCT METADATA$FILENAME FROM @GOOGLE_CLOUD;
 SELECT DISTINCT METADATA$FILENAME FROM @TEMPLATEGENERATOR;
+
+// Cortex AI
+// https://quickstarts.snowflake.com/guide/getting_started_with_synthetic_data_and_distillation_for_llms/
+CREATE OR REPLACE TABLE support_ticket_category (
+  category string
+);
+
+INSERT INTO support_ticket_category (category) VALUES 
+  ('Roaming fees'), 
+  ('Slow data speed'), 
+  ('Lost phone'), 
+  ('Add new line'), 
+  ('Closing account');
+
+// Models
+//mistral-large
+//llama2-70b-chat
+//llama3-8b
+//llama3.1-8b
+// In this step we prompt the LLM to generate 25 synthetic examples of customer support tickets for every category.
+CREATE or REPLACE TABLE support_tickets AS (
+    SELECT 
+      category, 
+      TRY_PARSE_JSON(
+        SNOWFLAKE.CORTEX.COMPLETE(
+          'llama3.1-8b',
+          CONCAT(
+            'Bitte erstelle 25 Beispiele eines Kunden Anrufs in eines Telekommunikationsanbieters für die folgenden Kategorien:', category, '. Geben Sie detaillierte und realistische Szenarien vor, denen Kundendienstmitarbeiter begegnen könnten. Stellen Sie sicher, dass die Beispiele vielfältig sind und verschiedene Situationen innerhalb jeder Kategorie abdecken. Bitte fügen Sie die Beispiele in eine JSON-Liste ein. Jedes Element der JSON-Liste sollte Folgendes enthalten: {"scenario": <Szenario>, "request": <detaillierte Anfrage des Kunden, die in der Regel weniger als 3 Sätze umfasst>}. Die Ausgabe sollte nur JSON und keine anderen Wörter enthalten.'))) AS tickets
+    FROM support_ticket_category
+);
+SELECT * FROM support_tickets;
+
+// The table support_tickets now contains our synthetic data but the data format is a bit inconvenient as each row contains multiple support tickets. To flatten the data we run
+create or replace table flatten_support_tickets as (
+select 
+    category, 
+    abs(hash(value:request)) % 10000000 as id,
+    value:request as request, 
+    value:scenario as scenario
+from support_tickets, lateral flatten(input => tickets) 
+);
+// We now have a table flatten_support_tickets with one ticket per row. We also generated unique IDs for each ticket.
+SELECT * FROM flatten_support_tickets;
+
+// We want to make sure our data is of high quality. Again, we can use an LLM to help us with this task. Instead of prompting the LLM to generate the support tickets, we now ask the LLM to rate the synthetic data for two criteria: We want the tickets to be (1) realistic and (2) valid.
+CREATE OR REPLACE TABLE rate_support_tickets as (
+    SELECT category, id, request, scenario, TRY_PARSE_JSON(SNOWFLAKE.CORTEX.COMPLETE('llama3-8b', CONCAT('You are a judge to verify if a the support ticket received in a telecom company is realistic, and valid, please give scores from 1 to 5 for each category and give your final recommendation for the given question. Support Ticket: ', request, ' Please give the score in JSON format alone following this example: "{"realistic": 5, "valid": 4}".  You can put a reason into the result JSON as "reason": <reason>. Only include JSON in the output and no other words.'))) as rating
+    FROM flatten_support_tickets
+);
+SELECT * FROM rate_support_tickets;
+
+// Now we can filter out examples that are below the bar for realistic or valid. We create the filtered_support_tickets table for the next steps.
+CREATE OR REPLACE TABLE filtered_support_tickets AS (
+    SELECT * FROM rate_support_tickets WHERE rating['realistic'] >= 4 AND rating['valid'] >= 4
+);
+
+// First, let's use Snowflake Cortex AI COMPLETE() to categorize the support tickets into our categories – Roaming Fees, Slow data speed, Add new line, Closing account and more.
+//We can use any Cortex AI supported model under the hood to invoke the COMPLETE() function. In this quickstart, let's use llama3.1-405b and use the following prompt.
+CREATE OR REPLACE FUNCTION CATEGORIZE_PROMPT_TEMPLATE(request STRING)
+RETURNS STRING
+LANGUAGE SQL
+AS
+$$
+CONCAT('You are an agent that helps organize requests that come to our support team. 
+
+The request category is the reason why the customer reached out. These are the possible types of request categories:
+
+Roaming fees
+Slow data speed
+Lost phone
+Add new line
+Closing account
+
+Try doing it for this request and return only the request category only.
+
+request: ', request)
+$$
+;
+
+// Using a powerful and large language model such as llama3.1-405b might be highly accurate without doing any complex customizations but running llama3.1-405b on millions of support tickets comes with a cost. So, let's try the same COMPLETE() function with the same prompt but this time with a smaller model such as llama3-8b.
+SELECT id, SNOWFLAKE.CORTEX.COMPLETE('llama3-8b', CATEGORIZE_PROMPT_TEMPLATE(request)) FROM filtered_support_tickets;
+
+// We now split the data into a training and validation portion. We want to use 20% of the data for validation and the remaining 80% for training. To get a reproducible data split between runs, we use the unique ID we to determine if a ticket is part of the training portion or the validation portion:
+CREATE OR REPLACE TABLE training_data AS (
+    SELECT * FROM filtered_support_tickets WHERE ID % 10 < 8 
+);
+SELECT * FROM filtered_support_tickets;
+
+CREATE OR REPLACE TABLE validation_data AS (
+    SELECT * FROM filtered_support_tickets WHERE ID % 10 >= 8 
+);
+SELECT * FROM validation_data;
