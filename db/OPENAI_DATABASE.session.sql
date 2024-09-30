@@ -219,6 +219,7 @@ SELECT DISTINCT METADATA$FILENAME FROM @GOOGLE_CLOUD;
 SELECT DISTINCT METADATA$FILENAME FROM @TEMPLATEGENERATOR;
 
 // Cortex AI
+SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large', 'Wie kann ich meine Daten in der Cloud sicher speichern?');
 // https://quickstarts.snowflake.com/guide/getting_started_with_synthetic_data_and_distillation_for_llms/
 CREATE OR REPLACE TABLE support_ticket_category (
   category string

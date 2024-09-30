@@ -215,6 +215,13 @@ if snowflake:
                 paragraphs.columns = ["PARAGRAPH","PARAGRAPH_DESC","PARAGRAPH_URL"]
                 #paragraphs = load_data(session, 'DB_BG_HEALTH.PUBLIC.ANZEIGE_PRE')
                 st.dataframe(paragraphs)
+                
+                # Cortex AI
+                st.subheader("Cortex AI")
+                if st.checkbox("Cortex AI", value=False, key="cortex"):
+                    st.write("Wie kann ich meine Daten in der Cloud sicher speichern?")
+                    result = session.sql("SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large', 'Wie kann ich meine Daten in der Cloud sicher speichern?');").collect()
+                    st.text(result[0][0])
 
                 # Files
                 st.subheader("Dateien")
