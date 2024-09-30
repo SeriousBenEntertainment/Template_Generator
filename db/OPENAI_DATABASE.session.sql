@@ -242,35 +242,37 @@ CREATE or REPLACE TABLE support_tickets AS (
       category, 
       TRY_PARSE_JSON(
         SNOWFLAKE.CORTEX.COMPLETE(
-          'llama3.1-8b',
+          'mistral-large',
           CONCAT(
-            'Bitte erstelle 25 Beispiele eines Kunden Anrufs in eines Telekommunikationsanbieters für die folgenden Kategorien:', category, '. Geben Sie detaillierte und realistische Szenarien vor, denen Kundendienstmitarbeiter begegnen könnten. Stellen Sie sicher, dass die Beispiele vielfältig sind und verschiedene Situationen innerhalb jeder Kategorie abdecken. Bitte fügen Sie die Beispiele in eine JSON-Liste ein. Jedes Element der JSON-Liste sollte Folgendes enthalten: {"scenario": <Szenario>, "request": <detaillierte Anfrage des Kunden, die in der Regel weniger als 3 Sätze umfasst>}. Die Ausgabe sollte nur JSON und keine anderen Wörter enthalten.'))) AS tickets
+            'Bitte erstelle 25 Beispiele eines Kunden Anrufs in eines Telekommunikationsanbieters für die folgenden Kategorien:', category, 'Gebe detaillierte und realistische Szenarien vor, denen Kundendienstmitarbeiter begegnen könnten. Stelle sicher, dass die Beispiele vielfältig sind und verschiedene Situationen innerhalb jeder Kategorie abdecken. Bitte füge die Beispiele in eine JSON-Liste ein. Jedes Element der JSON-Liste sollte Folgendes enthalten: {"scenario": <Szenario>, "request": <detaillierte Anfrage des Kunden, die in der Regel weniger als 3 Sätze umfasst>}. Die Ausgabe sollte nur JSON und keine anderen Wörter enthalten.'))) AS tickets
     FROM support_ticket_category
 );
 SELECT * FROM support_tickets;
 
 // The table support_tickets now contains our synthetic data but the data format is a bit inconvenient as each row contains multiple support tickets. To flatten the data we run
-create or replace table flatten_support_tickets as (
-select 
+CREATE OR REPLACE TABLE flatten_support_tickets AS (
+SELECT
     category, 
-    abs(hash(value:request)) % 10000000 as id,
-    value:request as request, 
-    value:scenario as scenario
-from support_tickets, lateral flatten(input => tickets) 
+    abs(hash(value:request)) % 10000000 AS id,
+    value:request AS request, 
+    value:scenario AS scenario
+FROM support_tickets, LATERAL flatten(input => tickets) 
 );
 // We now have a table flatten_support_tickets with one ticket per row. We also generated unique IDs for each ticket.
 SELECT * FROM flatten_support_tickets;
 
 // We want to make sure our data is of high quality. Again, we can use an LLM to help us with this task. Instead of prompting the LLM to generate the support tickets, we now ask the LLM to rate the synthetic data for two criteria: We want the tickets to be (1) realistic and (2) valid.
 CREATE OR REPLACE TABLE rate_support_tickets as (
-    SELECT category, id, request, scenario, TRY_PARSE_JSON(SNOWFLAKE.CORTEX.COMPLETE('llama3-8b', CONCAT('You are a judge to verify if a the support ticket received in a telecom company is realistic, and valid, please give scores from 1 to 5 for each category and give your final recommendation for the given question. Support Ticket: ', request, ' Please give the score in JSON format alone following this example: "{"realistic": 5, "valid": 4}".  You can put a reason into the result JSON as "reason": <reason>. Only include JSON in the output and no other words.'))) as rating
+    SELECT category, id, request, scenario, TRY_PARSE_JSON(SNOWFLAKE.CORTEX.COMPLETE(
+        'mistral-large', 
+        CONCAT('Du beurteilst, ob ein Support-Ticket, das bei einem Telekommunikationsunternehmen eingegangen ist, realistisch und gültig ist. Bitte gebe Noten von 1 bis 5 für jede Kategorie und geben eine endgültige Empfehlung für die gegebene Frage. Supportanfrage: ', request, ' Bitte gebe die Punktzahl (5 hoch, 1 niedrig) allein im JSON-Format nach diesem Beispiel an: „{„trust“: <Punktzahl>}“. Füge den Grund für das Ergebnis in JSON als „reason“: <Grund> ein. Nehme nur JSON {z.B. {"trust": 1, "reason": "Die Anfrage ist realistisch und gültig, da Roaming-Gebühren im Ausland oft höher sind als erwartet."} in die Ausgabe auf und keine anderen Wörter.'))) AS rating
     FROM flatten_support_tickets
 );
 SELECT * FROM rate_support_tickets;
 
 // Now we can filter out examples that are below the bar for realistic or valid. We create the filtered_support_tickets table for the next steps.
 CREATE OR REPLACE TABLE filtered_support_tickets AS (
-    SELECT * FROM rate_support_tickets WHERE rating['realistic'] >= 4 AND rating['valid'] >= 4
+    SELECT * FROM rate_support_tickets WHERE rating['trust'] <= 3
 );
 
 // First, let's use Snowflake Cortex AI COMPLETE() to categorize the support tickets into our categories – Roaming Fees, Slow data speed, Add new line, Closing account and more.
@@ -296,8 +298,11 @@ request: ', request)
 $$
 ;
 
-// Using a powerful and large language model such as llama3.1-405b might be highly accurate without doing any complex customizations but running llama3.1-405b on millions of support tickets comes with a cost. So, let's try the same COMPLETE() function with the same prompt but this time with a smaller model such as llama3-8b.
-SELECT id, SNOWFLAKE.CORTEX.COMPLETE('llama3-8b', CATEGORIZE_PROMPT_TEMPLATE(request)) FROM filtered_support_tickets;
+// Using a powerful and large language model such as llama3.1-405b might be highly accurate without doing any complex customizations but running llama3.1-405b on millions of support tickets comes with a cost. So, let's try the same COMPLETE() function with the same prompt but this time with a smaller model such as llama3.1-8b.
+SELECT id, SNOWFLAKE.CORTEX.COMPLETE(
+    'llama3.1-8b', 
+    CATEGORIZE_PROMPT_TEMPLATE(request)
+    ) FROM filtered_support_tickets;
 
 // We now split the data into a training and validation portion. We want to use 20% of the data for validation and the remaining 80% for training. To get a reproducible data split between runs, we use the unique ID we to determine if a ticket is part of the training portion or the validation portion:
 CREATE OR REPLACE TABLE training_data AS (
