@@ -113,6 +113,18 @@ def load_data(_session, table_name):
     st.success("Daten erfolgreich gelesen.")
     return pd.DataFrame(table)
 
+# List stages
+def list_stages(session):
+    try:
+        stages = session.sql("SHOW STAGES;").collect()
+        return [
+                    stage.name.replace('_', ' ').title()
+                    for stage in stages
+                ]
+    except S3Error as e:
+        st.error(f"Error: {e}")
+    return
+
 # Function to list objects in a Stage
 def list_files(session, stage_name):
     try:

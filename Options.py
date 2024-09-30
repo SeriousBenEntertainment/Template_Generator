@@ -23,7 +23,7 @@ def frontend_options(df, schema, client):
     # Importing options
     if client is not None:
         if isinstance(client, Session):
-            options_csv = client.read.options({"FIELD_DELIMITER": ",", "FIELD_OPTIONALLY_ENCLOSED_BY": "'", "SKIP_HEADER": 1}).csv("@GOOGLE_CLOUD/options.csv")
+            options_csv = client.read.options({"FIELD_DELIMITER": ",", "FIELD_OPTIONALLY_ENCLOSED_BY": "'", "SKIP_HEADER": 1}).csv(f"@{schema.upper().replace(' ', '_')}/options.csv")
             options = options_csv.to_pandas()
             options.columns = ["QUESTION", "TYPE", "DEFAULT", "CHAPTER_PARAGRAPH"]
         if isinstance(client, Minio):

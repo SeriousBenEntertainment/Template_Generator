@@ -31,7 +31,7 @@ from textwrap import wrap
 sys.path.insert(1, "pages/functions/")
 from Options import frontend_options
 from Template import template_options
-from Functions import connect_to_minio, list_buckets, list_objects, upload_files, create_session, list_files, load_data, write_data, uploading_files, export_doc, web_scraper
+from Functions import connect_to_minio, list_buckets, list_objects, upload_files, create_session, list_stages, list_files, load_data, write_data, uploading_files, export_doc, web_scraper
 
 # Define session states
 if 'options_setup' not in st.session_state:
@@ -61,10 +61,10 @@ with sidebar:
         try:
             # Establish MinIO session
             minio_client = connect_to_minio("localhost:9000", st.secrets['MinIO']['user'], st.secrets['MinIO']['pass'])
-            
+
             # Select Schema
             schema = st.selectbox("Wähle die passende Konfiguration", options=list_buckets(minio_client))
-            
+
             # Importing presets
             presets_csv = minio_client.get_object(schema.lower().replace(' ', '-'), "presets.csv")
             csv_data = presets_csv.read().decode('utf-8')
@@ -76,18 +76,15 @@ with sidebar:
         try:
             # Establish Snowflake session
             session = create_session()
-            
+
             # Select Schema
-            schema = st.selectbox("Wähle die passende Konfiguration", options="Google Cloud") #_list_files_in_stage("@GOOGLE_CLOUD"))
-            
+            schema = st.selectbox("Wähle die passende Konfiguration", options=list_stages(session))
+
             # Importing Schema
             csv_data = session.read.options({"FIELD_DELIMITER": ",", "FIELD_OPTIONALLY_ENCLOSED_BY": "'", "SKIP_HEADER": 1}).csv("@GOOGLE_CLOUD/presets.csv")
             presets = csv_data.to_pandas()
             presets.columns = ["OPTION", "DEFAULT"]
-            # Use in UDF
-            #with SnowflakeFile.open("@GOOGLE_CLOUD/presets.csv", 'rb') as f:
-            #    presets = pd.read_csv(f, dtype=str)
-                
+
         except Exception as e:
             st.error(f"Keine Verbindung zu Snowflake möglich: {e}")
     try:
@@ -113,10 +110,10 @@ def convert_docx_to_pdf(docx_content):
     
     # Load the DOCX document
     document = Document(input_stream)
-    
+
     # Creating a BytesIO object for the output file
     output_stream = BytesIO()
-    
+
     # Creating the PDF document
     pdf = canvas.Canvas(output_stream, pagesize=letter)
     width, height = letter
@@ -124,7 +121,7 @@ def convert_docx_to_pdf(docx_content):
     y_position = height - margin
     line_height = 12
     max_line_width = width - 2 * margin
-    
+
     # Inserting the paragraphs into the PDF
     for para in document.paragraphs:
         text = para.text
@@ -172,8 +169,7 @@ if minio:
                         st.success("Datei(en) erfolgreich hochgeladen.")
                     except S3Error as e:
                         st.error(f"Error: {e}")
-                #buckets = list_buckets(minio_client)
-                #if buckets:
+
                 # Display objects in selected bucket
                 st.write(f"Objekte in {schema}-Schema")
                 objects = list_objects(minio_client, schema)
@@ -194,8 +190,6 @@ if minio:
                         pdf_viewer(pdf_content, height=800)
                     except S3Error as e:
                         st.error(f"Error: {e}")
-                #else:
-                #    st.warning("Keine Buckets gefunden.")
             else:
                 st.error("Keine Verbindung zum MinIO möglich.")
         except S3Error as e:
@@ -210,11 +204,18 @@ if snowflake:
                 st.write(f"Streamlit Version: {st.__version__}")
                 st.write(f"Python Version: {sys.version}")
 
-                df = load_data(session, 'DB_BG_HEALTH.PUBLIC.ANZEIGE_PRE')
+                # Loading database tables from csv files
+                df_csv = session.read.options({"FIELD_DELIMITER": ",", "FIELD_OPTIONALLY_ENCLOSED_BY": "'", "SKIP_HEADER": 1}).csv(f"@{schema.upper().replace(' ', '_')}/anzeige_pre.csv")
+                df = df_csv.to_pandas()
+                df.columns = ["PARAGRAPH","PARAGRAPH_TITLE","PARAGRAPH_TEXT"]
+                #df = load_data(session, 'DB_BG_HEALTH.PUBLIC.ANZEIGE_PRE')
                 st.dataframe(df)
-                paragraphs = load_data(session, 'DB_BG_HEALTH.PUBLIC.ANZEIGE_PARAGRAPHS')
+                paragraphs_csv = session.read.options({"FIELD_DELIMITER": ",", "FIELD_OPTIONALLY_ENCLOSED_BY": "'", "SKIP_HEADER": 1}).csv(f"@{schema.upper().replace(' ', '_')}/anzeige_paragraphs.csv")
+                paragraphs = paragraphs_csv.to_pandas()
+                paragraphs.columns = ["PARAGRAPH","PARAGRAPH_DESC","PARAGRAPH_URL"]
+                #paragraphs = load_data(session, 'DB_BG_HEALTH.PUBLIC.ANZEIGE_PRE')
                 st.dataframe(paragraphs)
-                
+
                 # Files
                 st.subheader("Dateien")
                 uploaded_files = st.file_uploader("Datei(en) hochladen", accept_multiple_files=True, type=['csv', 'pdf', 'docx'])
@@ -248,7 +249,6 @@ if snowflake:
                     st.warning("Keine Verbindung zu Snowflake möglich.")
         except Exception as e:
             st.error(f"Keine Verbindung zu Snowflake möglich: {e}")
-
 
 # Show ChatBot
 pg.run()
