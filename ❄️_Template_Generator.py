@@ -21,7 +21,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_openai import ChatOpenAI
 from snowflake.snowpark.types import *
-from snowflake.snowpark.files import SnowflakeFile
+from snowflake.cortex import Complete
 import pandas as pd
 from docx import Document
 from reportlab.lib.pagesizes import letter
@@ -220,8 +220,16 @@ if snowflake:
                 st.subheader("Cortex AI")
                 if st.checkbox("Cortex AI", value=False, key="cortex"):
                     st.write("Wie kann ich meine Daten in der Cloud sicher speichern?")
-                    result = session.sql("SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large', 'Wie kann ich meine Daten in der Cloud sicher speichern?');").collect()
-                    st.text(result[0][0])
+                    stream = Complete(
+                                        "mistral-7b",
+                                        "What are unique features of the Snowflake SQL dialect?",
+                                        session=session,
+                                        stream=False)
+                    st.write(stream)
+                    #for update in stream:
+                    #    st.write(update)
+                    #result = session.sql("SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large', 'Wie kann ich meine Daten in der Cloud sicher speichern?');").collect()
+                    #st.text(result[0][0])
 
                 # Files
                 st.subheader("Dateien")
