@@ -224,10 +224,10 @@ if snowflake:
                                         "mistral-7b",
                                         "What are unique features of the Snowflake SQL dialect?",
                                         session=session,
-                                        stream=True)
-
-                    for update in stream:
-                        st.write(update)
+                                        stream=False)
+                    st.write(stream)
+                    #for update in stream:
+                    #    st.write(update)
                     #result = session.sql("SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large', 'Wie kann ich meine Daten in der Cloud sicher speichern?');").collect()
                     #st.text(result[0][0])
 
