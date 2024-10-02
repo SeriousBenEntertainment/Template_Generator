@@ -17,7 +17,52 @@ from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from minio import Minio
 from minio.error import S3Error
+from typing import Any, List, Mapping, Optional
+from langchain_core.callbacks.manager import CallbackManagerForLLMRun
+from langchain_core.language_models.llms import LLM
+from langchain_core.messages import AIMessage
+from snowflake import snowpark
 from snowflake.snowpark import Session
+from snowflake.connector import DictCursor
+from snowflake.connector.connection import SnowflakeConnection
+from snowflake.cortex import Complete
+
+
+# Cortex
+class Cortex(LLM):
+    session: Session = None
+
+    model: str = "mistral-large"
+
+    @property
+    def _llm_type(self) -> str:
+        return "cortex"
+
+    def _call(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> str:
+        if stop is not None:
+            raise ValueError("stop kwargs are not permitted.")
+
+        res = Complete(
+            model=self.model,
+            prompt=prompt.replace("'", ""),
+            session=self.session,
+            stream=False
+        )
+        return res
+
+    @property
+    def _identifying_params(self) -> Mapping[str, Any]:
+        """Get the identifying parameters."""
+        return {
+            "session": self.session, 
+            "model": self.model
+        }
 
 # Establish MiniO session
 def connect_to_minio(endpoint_url, access_key, secret_key):

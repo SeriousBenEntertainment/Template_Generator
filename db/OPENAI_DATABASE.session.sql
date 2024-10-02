@@ -219,6 +219,11 @@ SELECT DISTINCT METADATA$FILENAME FROM @GOOGLE_CLOUD;
 SELECT DISTINCT METADATA$FILENAME FROM @TEMPLATEGENERATOR;
 
 // Cortex AI
+// Models
+//mistral-large
+//llama2-70b-chat
+//llama3-8b
+//llama3.1-8b
 SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large', 'Wie kann ich meine Daten in der Cloud sicher speichern?');
 // https://quickstarts.snowflake.com/guide/getting_started_with_synthetic_data_and_distillation_for_llms/
 CREATE OR REPLACE TABLE support_ticket_category (
@@ -232,11 +237,6 @@ INSERT INTO support_ticket_category (category) VALUES
   ('Add new line'), 
   ('Closing account');
 
-// Models
-//mistral-large
-//llama2-70b-chat
-//llama3-8b
-//llama3.1-8b
 // In this step we prompt the LLM to generate 25 synthetic examples of customer support tickets for every category.
 CREATE or REPLACE TABLE support_tickets AS (
     SELECT 

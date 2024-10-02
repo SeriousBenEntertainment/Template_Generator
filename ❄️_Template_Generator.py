@@ -19,10 +19,7 @@ from minio.error import S3Error
 from langchain_community.chat_message_histories import StreamlitChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
-from langchain_snowpoc.llms import SQLCortex
-from snowflake.connector import connect
 from snowflake.snowpark.types import *
 import pandas as pd
 from docx import Document
@@ -33,7 +30,7 @@ from textwrap import wrap
 sys.path.insert(1, "pages/functions/")
 from Options import frontend_options
 from Template import template_options
-from Functions import connect_to_minio, list_buckets, list_objects, upload_files, create_session, list_stages, list_files, load_data, write_data, uploading_files, export_doc, web_scraper
+from Functions import connect_to_minio, list_buckets, list_objects, upload_files, create_session, list_stages, list_files, load_data, write_data, uploading_files, export_doc, web_scraper, Cortex
 
 # Define session states
 if 'options_setup' not in st.session_state:
@@ -292,48 +289,30 @@ if st.session_state['options_setup']:
             ]
         )
 
-        # Setting the LLM
+        # Setting the LLMs
+        # ChatGPT
         if on:
             chain = prompt | ChatOpenAI(
                 model="gpt-4o-mini",
                 api_key=st.secrets["openai"]["key"]
             )
-        else:
-            if snowflake:
-                # Cortex AI
-                con_params = {
-                    'account': st.secrets.snowflake['account'],
-                    'user': st.secrets.snowflake["user"],
-                    'authenticator': 'SNOWFLAKE_JWT',
-                    'private_key_file': st.secrets.snowflake['private_key_file'],
-                    'warehouse': st.secrets.snowflake['warehouse'],
-                    'database': st.secrets.snowflake['database'],
-                    'schema': st.secrets.snowflake['schema']
-                }
-                snowflake_connection = connect(**con_params)
-                output_parser = StrOutputParser()
-                #prompt = ChatPromptTemplate.from_messages([
-                #    ("system",
-                #    ("You are world class Snowflake specialist."
-                #    "Answer using no more than 200 words."
-                #    "If you don't know just say so.")
-                #    ),
-                #    ("user", "{input}")
-                #])
-                chain = prompt | SQLCortex(
-                    connection=snowflake_connection, 
-                    model="mistral-7b"
-                ) | output_parser
-            else:
-                # Local Server
-                server_url = f"{url}:{str(port)}/v1"
-                chain = prompt | ChatOpenAI(
-                    base_url=server_url,
-                    model="llama-3.1-8b-chat-doctor-Q4_K_M_v2",
-                    temperature=0.5,
-                    max_tokens=4000,
-                    api_key="lm-studio"
-                )
+
+        # Cortex AI
+        if snowflake:
+            chain = prompt | Cortex(
+                session=session, 
+                model="mistral-large"
+            )
+        # Local LLM Server
+        if not snowflake and not on:
+            server_url = f"{url}:{str(port)}/v1"
+            chain = prompt | ChatOpenAI(
+                base_url=server_url,
+                model="llama-3.1-8b-chat-doctor-Q4_K_M_v2",
+                temperature=0.5,
+                max_tokens=4000,
+                api_key="lm-studio"
+            )
 
         chain_with_history = RunnableWithMessageHistory(
             chain,
@@ -380,7 +359,7 @@ if st.session_state['options_setup']:
                     config = {"configurable": {"session_id": "any"}}
                     response = chain_with_history.invoke({"question": prompt}, config)
                     if snowflake:
-                        st.chat_message("ai").write(response)
+                        st.chat_message("ai").write(response.content)
                     else:
                         st.chat_message("ai").write(response.content)
 
