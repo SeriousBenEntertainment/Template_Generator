@@ -132,5 +132,5 @@ def frontend_options(df, schema, client):
                     options_output = options_output._append({"ANSWER": answer, "PARAGRAPH": paragraph, "FILES": []}, ignore_index=True)
 
         # Submit button
-        submitted = st.form_submit_button("Optionen einchecken")
+        submitted = st.form_submit_button("Optionen einchecken", icon="📄")
     return submitted, combined_list, options_output
