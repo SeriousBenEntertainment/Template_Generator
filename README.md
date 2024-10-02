@@ -11,8 +11,14 @@ Download the [Package](https://github.com/SeriousBenEntertainment/Template_Gener
 To create a local Python environment with [Miniconda](https://docs.anaconda.com/miniconda/), use the following commands
 
 ```bash
-conda create --name myenv python=3.10
-conda activate myenv
+# Create the environment
+conda env create
+
+# Activate the environment
+conda activate template-generator
+
+# to remove
+conda remove -n template-generator --all
 ```
 
 ### Python Libraries

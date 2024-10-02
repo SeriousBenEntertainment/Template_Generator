@@ -76,7 +76,8 @@ def create_session():
     session = Session.builder.configs(st.secrets.snowflake).create()
     try:
         session.use_role(st.secrets.snowflake["role"])
-        session.use_warehouse("COMPUTE_WH") #st.secrets.snowflake["default_warehouse"]
+        #session.use_warehouse(st.secrets.snowflake["warehouse"])
+        session.sql('USE WAREHOUSE "{st.secrets.snowflake["warehouse"]}"')
         session.use_database(st.secrets.snowflake["database"])
         session.use_schema(st.secrets.snowflake["schema"])
     except Exception as e:

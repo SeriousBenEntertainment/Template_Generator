@@ -19,7 +19,11 @@ from minio.error import S3Error
 from langchain_community.chat_message_histories import StreamlitChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
+from langchain_snowpoc.llms import Cortex
+import snowflake.connector
+from snowflake.snowpark import Session
 from snowflake.snowpark.types import *
 from snowflake.cortex import Complete
 import pandas as pd
@@ -299,10 +303,19 @@ if st.session_state['options_setup']:
         else:
             if snowflake:
                 # Cortex AI
-                chain = prompt | Complete(
-                                    model="mistral-7b",
-                                    session=session,
-                                    stream=False)
+                #snowflake_connection = snowflake.connector.connect(
+                #    connection_name="snowflake",
+                #)
+                llm = Cortex(model="mistral-7b", session=session)
+
+                #llm = ChatSnowflakeCortex(connection=session, model="mistral-7b", snowflake_username="bengross", snowflake_password="adesso_2024", snowflake_account="sv04740.west-europe.azure", snowflake_role="HEALTH_DEV", snowflake_warehouse="COMPUTE_WH", snowflake_database="DB_BG_HEALTH", snowflake_schema="PUBLIC")
+                output_parser = StrOutputParser()
+                # create a chain
+                chain = prompt | llm | output_parser
+                #chain = prompt | Complete(
+                #                    model="mistral-7b",
+                #                    session=session,
+                #                    stream=False) | output_parser
                 #result = session.sql("SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large', 'Wie kann ich meine Daten in der Cloud sicher speichern?');").collect()
                 #st.text(result[0][0])
             else:
