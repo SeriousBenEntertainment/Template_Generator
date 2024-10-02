@@ -339,7 +339,7 @@ with st.expander('ChatBot'):
 
 
             ## Submit button
-            submitted = st.form_submit_button('Absenden')
+            submitted = st.form_submit_button('Absenden', icon='🚀')
             if submitted:
                 messages_input.append({"role": "user", "content": st.session_state['user_input']})
                 st.session_state['user_input'] = ''

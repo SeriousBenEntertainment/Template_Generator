@@ -274,4 +274,4 @@ def export_doc(data, cloud, last_chapter, paragraph_of_summary, table_of_glossar
     buffer = BytesIO()
     document.save(buffer)
     st.toast('Das Dokument ist fertig!', icon ='📃')
-    st.download_button(label='Download Template', data=buffer, file_name='BAS_Anzeige_Template.docx', mime='application/vnd.openxmlformats')
+    st.download_button(label='Download Template', data=buffer, file_name='BAS_Anzeige_Template.docx', mime='application/vnd.openxmlformats', icon='📃')

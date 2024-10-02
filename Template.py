@@ -38,5 +38,5 @@ def template_options(combined_list, schema, client):
                 table_of_glossar = st.checkbox("Glossar hinzufügen?", value=True)
                 table_of_stakeholders = st.checkbox("Stakeholder hinzufügen?", value=True)
                 table_of_attachments = st.checkbox("Anhänge hinzufügen?", value=True)
-        checked_in = st.form_submit_button("Template generieren")
+        checked_in = st.form_submit_button("Template generieren", icon="📄")
     return checked_in, chapters, table_of_contents, paragraph_of_summary, table_of_glossar, table_of_stakeholders, table_of_attachments
