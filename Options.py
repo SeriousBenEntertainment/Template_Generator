@@ -99,7 +99,7 @@ def frontend_options(df, schema, client):
                         if chapter_paragraph:
                             st.text(f"Zugehörige Absätze: {', '.join(chapter_paragraph)}", help=help_text)
                         x += 1
-                        files = st.multiselect("Füge zusätzliche Informationen hinzu", placeholder='Wähle eine oder mehrere Datei(en) aus', options=file_names, key=f"multifiles_options_{x}", default=["20190531_FAQ_80.pdf"])
+                        files = st.multiselect("Füge zusätzliche Informationen hinzu", placeholder='Wähle eine oder mehrere Datei(en) aus', options=file_names, key=f"multifiles_options_{x}", default=["2019-09-30 Cloud-Computing_aus_Sicht_des_BVA.pdf"])
                         st.markdown("---")
 
             # Toogle input

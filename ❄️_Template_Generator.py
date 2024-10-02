@@ -59,7 +59,7 @@ with sidebar:
     if minio:
         try:
             # Establish MinIO session
-            minio_client = connect_to_minio("localhost:9000", st.secrets['MinIO']['user'], st.secrets['MinIO']['pass'])
+            minio_client = connect_to_minio("192.168.178.23:9000", st.secrets['MinIO']['user'], st.secrets['MinIO']['pass'])
 
             # Select Schema
             schema = st.selectbox("Wähle die passende Konfiguration", options=list_buckets(minio_client))
@@ -298,10 +298,11 @@ if st.session_state['options_setup']:
             )
 
         # Cortex AI
+        #mistral-large
         if snowflake:
             chain = prompt | Cortex(
                 session=session, 
-                model="mistral-large"
+                model="llama3.1-8b"
             )
 
         # Local LLM Server
