@@ -23,9 +23,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 from langchain_snowpoc.llms import Cortex
 import snowflake.connector
-from snowflake.snowpark import Session
 from snowflake.snowpark.types import *
-from snowflake.cortex import Complete
 import pandas as pd
 from docx import Document
 from reportlab.lib.pagesizes import letter
@@ -85,7 +83,7 @@ with sidebar:
             schema = st.selectbox("Wähle die passende Konfiguration", options=list_stages(session))
 
             # Importing Schema
-            csv_data = session.read.options({"FIELD_DELIMITER": ",", "FIELD_OPTIONALLY_ENCLOSED_BY": "'", "SKIP_HEADER": 1}).csv("@GOOGLE_CLOUD/presets.csv")
+            csv_data = session.read.options({"FIELD_DELIMITER": ",", "FIELD_OPTIONALLY_ENCLOSED_BY": "'", "SKIP_HEADER": 1}).csv(f"@{schema.upper().replace(' ', '_')}/presets.csv")
             presets = csv_data.to_pandas()
             presets.columns = ["OPTION", "DEFAULT"]
 

@@ -3,10 +3,6 @@
 ##### Open-Source, hostet on https://github.com/DrBenjamin/OpenAI
 ##### Please reach out to benjamin.gross1@adesso.de for any questions
 ### All needed libraries (and their versions)
-black==24.3.0
-build==1.1.1
-tox==4.11.4
-#streamlit
 streamlit-scrollable-textbox
 streamlit-cropper
 streamlit-audiorec
@@ -15,8 +11,6 @@ watchdog
 openai
 beautifulsoup4
 argparse
-#pypiwin32
-#docopt
 python-docx
 docx2pdf
 pdf2docx
@@ -31,15 +25,8 @@ torchvision
 torchaudio
 langsmith
 langserve
-#==0.2.0
-#langchain==0.2.2
-#langchain-core==0.2.22
 langchain-community
-#==0.2.2
 langchain-openai
-#==0.1.8
-#langchain-experimental
-#langchain-cli
 diffusers
 bitsandbytes
 transformers
@@ -53,10 +40,8 @@ python-engineio==3.13.0
 python-socketio==4.6.0
 text_generation
 tomlkit==0.13.0
-#snowflake-connector-python
-#==3.11.0
-#snowflake-snowpark-python
 snowflake-cli-labs
-#==2.7.0
-#snowflake-ml-python
 minio
+black==24.3.0
+build==1.1.1
+tox==4.11.4
