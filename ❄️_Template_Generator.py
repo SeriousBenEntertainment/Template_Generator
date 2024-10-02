@@ -215,21 +215,6 @@ if snowflake:
                 paragraphs.columns = ["PARAGRAPH","PARAGRAPH_DESC","PARAGRAPH_URL"]
                 #paragraphs = load_data(session, 'DB_BG_HEALTH.PUBLIC.ANZEIGE_PRE')
                 st.dataframe(paragraphs)
-                
-                # Cortex AI
-                st.subheader("Cortex AI")
-                if st.checkbox("Cortex AI", value=False, key="cortex"):
-                    st.write("Wie kann ich meine Daten in der Cloud sicher speichern?")
-                    stream = Complete(
-                                        "mistral-7b",
-                                        "What are unique features of the Snowflake SQL dialect?",
-                                        session=session,
-                                        stream=False)
-                    st.write(stream)
-                    #for update in stream:
-                    #    st.write(update)
-                    #result = session.sql("SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large', 'Wie kann ich meine Daten in der Cloud sicher speichern?');").collect()
-                    #st.text(result[0][0])
 
                 # Files
                 st.subheader("Dateien")
@@ -312,14 +297,24 @@ if st.session_state['options_setup']:
                 api_key=st.secrets["openai"]["key"]
             )
         else:
-            server_url = f"{url}:{str(port)}/v1"
-            chain = prompt | ChatOpenAI(
-                base_url=server_url,
-                model="llama-3-8b-chat-doctor-Q4_K_M_v2",
-                temperature=0.5,
-                max_tokens=4000,
-                api_key="lm-studio"
-        )
+            if snowflake:
+                # Cortex AI
+                chain = prompt | Complete(
+                                    model="mistral-7b",
+                                    session=session,
+                                    stream=False)
+                #result = session.sql("SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large', 'Wie kann ich meine Daten in der Cloud sicher speichern?');").collect()
+                #st.text(result[0][0])
+            else:
+                # Local Server
+                server_url = f"{url}:{str(port)}/v1"
+                chain = prompt | ChatOpenAI(
+                    base_url=server_url,
+                    model="llama-3.1-8b-chat-doctor-Q4_K_M_v2",
+                    temperature=0.5,
+                    max_tokens=4000,
+                    api_key="lm-studio"
+            )
 
         chain_with_history = RunnableWithMessageHistory(
             chain,
