@@ -21,8 +21,8 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
-from langchain_snowpoc.llms import Cortex
-import snowflake.connector
+from langchain_snowpoc.llms import SQLCortex
+from snowflake.connector import connect
 from snowflake.snowpark.types import *
 import pandas as pd
 from docx import Document
@@ -301,21 +301,29 @@ if st.session_state['options_setup']:
         else:
             if snowflake:
                 # Cortex AI
-                #snowflake_connection = snowflake.connector.connect(
-                #    connection_name="snowflake",
-                #)
-                llm = Cortex(model="mistral-7b", session=session)
-
-                #llm = ChatSnowflakeCortex(connection=session, model="mistral-7b", snowflake_username="bengross", snowflake_password="adesso_2024", snowflake_account="sv04740.west-europe.azure", snowflake_role="HEALTH_DEV", snowflake_warehouse="COMPUTE_WH", snowflake_database="DB_BG_HEALTH", snowflake_schema="PUBLIC")
+                con_params = {
+                    'account': st.secrets.snowflake['account'],
+                    'user': st.secrets.snowflake["user"],
+                    'authenticator': 'SNOWFLAKE_JWT',
+                    'private_key_file': st.secrets.snowflake['private_key_file'],
+                    'warehouse': st.secrets.snowflake['warehouse'],
+                    'database': st.secrets.snowflake['database'],
+                    'schema': st.secrets.snowflake['schema']
+                }
+                snowflake_connection = connect(**con_params)
                 output_parser = StrOutputParser()
-                # create a chain
-                chain = prompt | llm | output_parser
-                #chain = prompt | Complete(
-                #                    model="mistral-7b",
-                #                    session=session,
-                #                    stream=False) | output_parser
-                #result = session.sql("SELECT SNOWFLAKE.CORTEX.COMPLETE('mistral-large', 'Wie kann ich meine Daten in der Cloud sicher speichern?');").collect()
-                #st.text(result[0][0])
+                #prompt = ChatPromptTemplate.from_messages([
+                #    ("system",
+                #    ("You are world class Snowflake specialist."
+                #    "Answer using no more than 200 words."
+                #    "If you don't know just say so.")
+                #    ),
+                #    ("user", "{input}")
+                #])
+                chain = prompt | SQLCortex(
+                    connection=snowflake_connection, 
+                    model="mistral-7b"
+                ) | output_parser
             else:
                 # Local Server
                 server_url = f"{url}:{str(port)}/v1"
@@ -325,7 +333,7 @@ if st.session_state['options_setup']:
                     temperature=0.5,
                     max_tokens=4000,
                     api_key="lm-studio"
-            )
+                )
 
         chain_with_history = RunnableWithMessageHistory(
             chain,
@@ -371,7 +379,10 @@ if st.session_state['options_setup']:
                     # Note: new messages are saved to history automatically by Langchain during run
                     config = {"configurable": {"session_id": "any"}}
                     response = chain_with_history.invoke({"question": prompt}, config)
-                    st.chat_message("ai").write(response.content)
+                    if snowflake:
+                        st.chat_message("ai").write(response)
+                    else:
+                        st.chat_message("ai").write(response.content)
 
         # Draw the messages at the end, so newly generated ones show up immediately
         view_chat_messages = st.expander("Zeige die Daten des Chatbots.")
