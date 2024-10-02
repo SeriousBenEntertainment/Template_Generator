@@ -303,6 +303,7 @@ if st.session_state['options_setup']:
                 session=session, 
                 model="mistral-large"
             )
+
         # Local LLM Server
         if not snowflake and not on:
             server_url = f"{url}:{str(port)}/v1"
@@ -359,7 +360,7 @@ if st.session_state['options_setup']:
                     config = {"configurable": {"session_id": "any"}}
                     response = chain_with_history.invoke({"question": prompt}, config)
                     if snowflake:
-                        st.chat_message("ai").write(response.content)
+                        st.chat_message("ai").write(response)
                     else:
                         st.chat_message("ai").write(response.content)
 

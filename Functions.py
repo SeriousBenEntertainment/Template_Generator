@@ -27,7 +27,6 @@ from snowflake.connector import DictCursor
 from snowflake.connector.connection import SnowflakeConnection
 from snowflake.cortex import Complete
 
-
 # Cortex
 class Cortex(LLM):
     session: Session = None
@@ -48,13 +47,13 @@ class Cortex(LLM):
         if stop is not None:
             raise ValueError("stop kwargs are not permitted.")
 
-        res = Complete(
+        response = Complete(
             model=self.model,
-            prompt=prompt.replace("'", ""),
+            prompt=prompt,
             session=self.session,
             stream=False
         )
-        return res
+        return response.replace("AI:", "")
 
     @property
     def _identifying_params(self) -> Mapping[str, Any]:
@@ -149,7 +148,6 @@ def uploading_files(session, stage_name, files):
         )
         
 # Load data table
-@st.cache_data
 def load_data(_session, table_name):
     # Read in data table
     table = _session.table(table_name)
