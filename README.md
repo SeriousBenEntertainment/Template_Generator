@@ -2,6 +2,8 @@
 
 Template Generator.
 
+![image](http://127.0.0.1:9000/templategenerator/images/2024100309091519-header.png)
+
 ## Local Installation
 
 Download the [Package](https://github.com/SeriousBenEntertainment/Template_Generator/archive/refs/tags/v0.1.0.zip) and install the needed libraries with
@@ -91,6 +93,9 @@ mc alias set myminio/ http://127.0.0.1:9000 minioadmin minioadmin
 
 # Info about the MinIO server
 mc --insecure admin info myminio
+
+# Set the policy for a bucket (to downloadable)
+mc anonymous set download myminio/templategenerator
 ```
 
 ### Web Interface

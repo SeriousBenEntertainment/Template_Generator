@@ -55,11 +55,11 @@ sidebar = st.sidebar
 with sidebar:
     st.subheader("Template Generator")
     st.image('images/header.png', width=200)
-    minio = st.toggle("MinIO", False)
+    minio = st.toggle("MinIO", True)
     if minio:
         try:
             # Establish MinIO session
-            minio_client = connect_to_minio("192.168.178.23:9000", st.secrets['MinIO']['user'], st.secrets['MinIO']['pass'])
+            minio_client = connect_to_minio(st.secrets['MinIO']['url'], st.secrets['MinIO']['user'], st.secrets['MinIO']['pass'])
 
             # Select Schema
             schema = st.selectbox("Wähle die passende Konfiguration", options=list_buckets(minio_client))
@@ -70,7 +70,7 @@ with sidebar:
             presets = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
         except S3Error as e:
             st.error(f"Keine Verbindung zu MinIO möglich: {e}")
-    snowflake = st.toggle("Snowflake", True)
+    snowflake = st.toggle("Snowflake", False)
     if snowflake:
         try:
             # Establish Snowflake session
