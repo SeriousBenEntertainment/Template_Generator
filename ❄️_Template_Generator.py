@@ -155,9 +155,11 @@ if minio:
                 df_csv = minio_client.get_object(schema.lower().replace(' ', '-'), "anzeige_pre.csv")
                 csv_data = df_csv.read().decode('utf-8')
                 df = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
+                st.dataframe(df)
                 paragraphs_csv = minio_client.get_object(schema.lower().replace(' ', '-'), "anzeige_paragraphs.csv")
                 csv_data = paragraphs_csv.read().decode('utf-8')
                 paragraphs = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
+                st.dataframe(paragraphs)
 
                 #Files
                 st.subheader("Dateien")
