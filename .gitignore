@@ -12,3 +12,4 @@ data/dialogues.parquet
 .DS_Store
 vba_extract.py
 extract.py
+db/minio.exe

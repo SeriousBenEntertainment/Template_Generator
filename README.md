@@ -78,8 +78,13 @@ podman machine init
 podman machine start
 podman run -p 9000:9000 -p 9001:9001 minio/minio server /data --console-address ":9001"
 
-# or local MinIO Server
+# Local MinIO Server on Mac
 brew install minio/stable/minio
+brew services start minio
+
+# or Windows
+https://dl.min.io/server/minio/release/windows-amd64/minio.exe
+.\db\minio.exe server C:\minio --console-address :9001
 ```
 
 ###  MinIO Client
