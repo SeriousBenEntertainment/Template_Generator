@@ -140,7 +140,7 @@ def convert_docx_to_pdf(docx_content):
 
 # Title
 st.title('❄️ Template Generator')
-st.write('Dieses Tool erstellt ein Template-Dokument zu einer BAS-Anzeige zum Thema Sozialdatenverarbeitung.')
+st.write('Dieses Tool erstellt ein Template-Word-Dokument.')
 
 # Minio connection
 if minio:
