@@ -292,11 +292,12 @@ if st.session_state['options_setup']:
         )
 
         # Setting the LLMs
-        # ChatGPT
+        # ChatGPT gpt-4o-mini
         if on:
             chain = prompt | ChatOpenAI(
-                model="gpt-4o-mini",
-                api_key=st.secrets["openai"]["key"]
+                model="gpt-4o-mini-2024-07-18",
+                api_key=st.secrets["openai"]["key"],
+                streaming=False,
             )
 
         # Cortex AI
