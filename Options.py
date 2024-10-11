@@ -30,7 +30,7 @@ def frontend_options(df, schema, client):
             options_csv = client.get_object(schema.lower().replace(' ', '-'), "options.csv")
             csv_data = options_csv.read().decode('utf-8')
             options = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
-    with st.form("Form_Options"):
+    with st.form(key="Form_Options"):
         st.write("Bitte fülle die folgenden Felder aus, um bestmöglich ein Template generieren zu können.")
         st.header("Optionen")
         st.write("Bitte fülle die folgenden Felder mit den fachlichen Informationen aus.")

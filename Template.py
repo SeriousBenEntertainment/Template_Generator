@@ -11,7 +11,7 @@ from snowflake.snowpark import Session
 
 # Template generation content
 def template_options(combined_list, schema, client):
-    with st.form("Form_Template"):
+    with st.form(key="Form_Template"):
         st.header("Template")
         st.write("Bitte wähle die Einstellungen für das Word Dokument aus.")
         template = st.container(border=True)
