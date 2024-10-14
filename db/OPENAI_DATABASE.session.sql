@@ -1,3 +1,7 @@
+// Drop secret key
+ALTER USER bengross_tech UNSET RSA_PUBLIC_KEY;
+
+
 -- Creating a database in Snowflake 
 CREATE DATABASE OPENAI_DATABASE;
 CREATE SCHEMA PUBLIC;
