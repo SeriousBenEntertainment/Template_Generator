@@ -299,36 +299,36 @@ if snowflake:
                             )
                             st.success(f"Documents processed in {int(time.time() - st.session_state.start)} seconds!")
 
-                llm = Cortex(connection=session.connection, model=MODEL_LLM)
-                prompt = ChatPromptTemplate.from_template(
-                    """
-                    Schreibe einen Abschnitt für eine Anzeige beim Bundesamt für Soziale Sicherung.
-                    über die Verwendung von Sozialdaten in der Cloud. 
-                    Denke schrittweise, bevor Du den Abschnitt schreibst.
-                    <context>
-                    {context}
-                    </context>
+                    llm = Cortex(connection=session.connection, model=MODEL_LLM)
+                    prompt = ChatPromptTemplate.from_template(
+                        """
+                        Schreibe einen Abschnitt für eine Anzeige beim Bundesamt für Soziale Sicherung.
+                        über die Verwendung von Sozialdaten in der Cloud. 
+                        Denke schrittweise, bevor Du den Abschnitt schreibst.
+                        <context>
+                        {context}
+                        </context>
 
-                    Zusätzliche Informationen: {input}"""
-                )
+                        Zusätzliche Informationen: {input}"""
+                    )
 
-                document_chain = create_stuff_documents_chain(llm, prompt)
+                    document_chain = create_stuff_documents_chain(llm, prompt)
 
-                retriever = st.session_state.vector.as_retriever()
-                retrieval_chain = create_retrieval_chain(retriever, document_chain)
+                    retriever = st.session_state.vector.as_retriever()
+                    retrieval_chain = create_retrieval_chain(retriever, document_chain)
 
-                # Then pass the prompt to the LLM
-                input_prompt = st.text_input("Frage an Streamlit-RAG")
-                if input_prompt:
-                    st.session_state.start  = time.time()
-                    response = retrieval_chain.invoke({"input": input_prompt})
-                    st.write(f"{response['answer']} (processed in {int(time.time() - st.session_state.start)} seconds.)")
+                    # Then pass the prompt to the LLM
+                    input_prompt = st.text_input("Frage an Streamlit-RAG")
+                    if input_prompt:
+                        st.session_state.start  = time.time()
+                        response = retrieval_chain.invoke({"input": input_prompt})
+                        st.write(f"{response['answer']} (processed in {int(time.time() - st.session_state.start)} seconds.)")
 
-                    # Find the relevant chunks
-                    st.write("Quellen:")
-                    for i, doc in enumerate(response["context"]):
-                        st.write(doc.page_content)
-                        st.write("--------------------------------")
+                        # Find the relevant chunks
+                        st.write("Quellen:")
+                        for i, doc in enumerate(response["context"]):
+                            st.write(doc.page_content)
+                            st.write("--------------------------------")
 
                 # Loading database tables from csv files
                 df_csv = session.read.options({"FIELD_DELIMITER": ",", "FIELD_OPTIONALLY_ENCLOSED_BY": "'", "SKIP_HEADER": 1}).csv(f"@{schema.upper().replace(' ', '_')}/anzeige_pre.csv")

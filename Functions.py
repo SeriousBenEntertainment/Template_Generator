@@ -121,7 +121,7 @@ def create_session():
     try:
         session.use_role(st.secrets.snowflake["role"])
         #session.use_warehouse(st.secrets.snowflake["warehouse"])
-        session.sql('USE WAREHOUSE "{st.secrets.snowflake["warehouse"]}"')
+        session.sql(f'USE WAREHOUSE "{st.secrets.snowflake["warehouse"]}"')
         session.use_database(st.secrets.snowflake["database"])
         session.use_schema(st.secrets.snowflake["schema"])
     except Exception as e:

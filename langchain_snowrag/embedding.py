@@ -2,7 +2,8 @@ import logging
 logger = logging.getLogger(__name__)
 from typing import Any, List, Mapping, Optional
 from langchain_core.embeddings import Embeddings
-from langchain_core.pydantic_v1 import BaseModel
+from pydantic import BaseModel
+#from langchain_core.pydantic_v1 import BaseModel
 from snowflake.connector import DictCursor
 from snowflake.connector.connection import SnowflakeConnection
 
