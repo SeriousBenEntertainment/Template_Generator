@@ -87,6 +87,21 @@ https://dl.min.io/server/minio/release/windows-amd64/minio.exe
 .\db\minio.exe server C:\minio --console-address :9001
 ```
 
+To host a tls minio instance use the following [certgen](https://github.com/minio/certgen) command
+
+```bash
+# Generate the certificates
+certgen -host "localhost,minio-*.example.net"
+./certgen -client -host "localhost"
+```
+
+and put the certificates into `/opt/homebrew/etc/minio/certs` (Mac homebrew installation).
+
+```bash
+# Restart the MinIO server
+mc admin service restart myminio
+```
+
 ###  MinIO Client
 
 Install the MinIO Client with
