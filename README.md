@@ -87,6 +87,22 @@ https://dl.min.io/server/minio/release/windows-amd64/minio.exe
 .\db\minio.exe server C:\minio --console-address :9001
 ```
 
+Configure tls connection with [certgen](https://github.com/minio/certgen)
+
+```bash
+# Generate the certificates
+certgen -host "localhost,minio-*.example.net"
+certgen -client -host "localhost"
+```
+
+Put them into `/opt/homebrew/etc/minio/certs` and `/opt/homebrew/etc/minio/certs/CAs` and restart the MinIO server.
+
+```bash
+# Restart the MinIO server
+brew services restart minio
+mc admin service restart myminio
+```
+
 ###  MinIO Client
 
 Install the MinIO Client with
