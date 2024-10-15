@@ -13,3 +13,4 @@ data/dialogues.parquet
 vba_extract.py
 extract.py
 db/minio.exe
+db/mc.exe
