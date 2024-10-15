@@ -73,8 +73,8 @@ def connect_to_minio(endpoint_url, access_key, secret_key, secure):
         client = Minio(endpoint_url,
         access_key=access_key,
         secret_key=secret_key,
-        secure=secure,
-        cert_check=False) # Using HTTP, set to True if using HTTPS
+        secure=secure, # Using HTTP or HTTPS
+        cert_check=False) 
         return client
     except S3Error as e:
         st.error(f"Error: {e}")
