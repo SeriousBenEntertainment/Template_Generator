@@ -78,7 +78,7 @@ with sidebar:
     if minio:
         try:
             # Establish MinIO session
-            minio_client = connect_to_minio(st.secrets['MinIO']['url'], st.secrets['MinIO']['user'], st.secrets['MinIO']['pass'])
+            minio_client = connect_to_minio(st.secrets['MinIO']['url'], st.secrets['MinIO']['user'], st.secrets['MinIO']['pass'], st.secrets['MinIO']['secure'])
 
             # Select Schema
             schema = st.selectbox("Wähle die passende Konfiguration", options=list_buckets(minio_client))

@@ -8,6 +8,14 @@ import pandas as pd
 import datetime
 import requests
 import os
+import warnings
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+warnings.filterwarnings(
+    action='ignore',
+    category=UserWarning,
+    module='Minio'
+)
 from io import BytesIO
 from bs4 import BeautifulSoup
 from docx import Document
@@ -20,11 +28,7 @@ from minio.error import S3Error
 from typing import Any, List, Mapping, Optional
 from langchain_core.callbacks.manager import CallbackManagerForLLMRun
 from langchain_core.language_models.llms import LLM
-from langchain_core.messages import AIMessage
-from snowflake import snowpark
 from snowflake.snowpark import Session
-from snowflake.connector import DictCursor
-from snowflake.connector.connection import SnowflakeConnection
 from snowflake.cortex import Complete
 
 # Cortex
@@ -64,12 +68,13 @@ class Cortex(LLM):
         }
 
 # Establish MiniO session
-def connect_to_minio(endpoint_url, access_key, secret_key):
+def connect_to_minio(endpoint_url, access_key, secret_key, secure):
     try:
         client = Minio(endpoint_url,
         access_key=access_key,
         secret_key=secret_key,
-        secure=False) # Using HTTP, set to True if using HTTPS
+        secure=secure,
+        cert_check=False) # Using HTTP, set to True if using HTTPS
         return client
     except S3Error as e:
         st.error(f"Error: {e}")
