@@ -2,12 +2,14 @@ import logging
 from typing import Any, List, Mapping, Optional
 from langchain_core.callbacks.manager import CallbackManagerForLLMRun
 from langchain_core.language_models.llms import LLM
+from langchain_core.messages import AIMessage
 from snowflake import snowpark
 from snowflake.connector import DictCursor
 from snowflake.connector.connection import SnowflakeConnection
 from snowflake.cortex import Complete
 
 logger = logging.getLogger(__name__)
+
 
 class Cortex(LLM):
     connection: SnowflakeConnection = None

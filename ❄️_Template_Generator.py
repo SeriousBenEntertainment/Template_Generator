@@ -56,8 +56,8 @@ if 'options' not in st.session_state:
     
 # Set Vectorization details
 MODEL_LLM = "mistral-large"
-MODEL_EMBEDDINGS = "e5-base-v2"
-VECTOR_LENGTH = 768
+MODEL_EMBEDDINGS = "multilingual-e5-large"
+VECTOR_LENGTH = 1024
 
 # Define the pages
 pages = {
@@ -92,6 +92,10 @@ with sidebar:
     snowflake = st.toggle("Snowflake", True)
     if snowflake:
         snowflake_rag = st.toggle("Snowflake RAG", False)
+        if snowflake_rag:
+            folder = os.path.abspath(os.path.join(os.getcwd(), '..'))
+            options_offline_resources = [f for f in os.listdir(folder) if os.path.isdir(os.path.join(folder, f))]
+            st.session_state.option_offline_resources = st.selectbox("Offline Resources", options_offline_resources)
         try:
             # Establish Snowflake session
             session = create_session()
@@ -110,8 +114,8 @@ with sidebar:
         kunde = st.text_input("Kunde:", value=presets['DEFAULT'][presets['OPTION'] == 'Kunde'].to_string(index=False))
         web = st.toggle("Webscraper", value=eval(presets['DEFAULT'][presets['OPTION'] == 'Webscraper'].to_string(index=False)))
         if web:
-            kunde_url = st.text_input("Kunden-Webseite (z.B. `Über uns`):", value=presets['DEFAULT'][presets['OPTION'] == 'WebUrl'].to_string(index=False))
-            kunde_info = web_scraper(kunde_url)
+            st.session_state.kunde_url = st.text_input("Kunden-Webseite (z.B. `Über uns`):", value=presets['DEFAULT'][presets['OPTION'] == 'WebUrl'].to_string(index=False))
+            kunde_info = web_scraper(st.session_state.kunde_url)
         cloud = st.selectbox("Cloud:", options=["AWS", "Azure", "Google Cloud"], index=int(presets['DEFAULT'][presets['OPTION'] == 'Cloud'].to_string(index=False)))
         on = st.toggle("OpenAI ChatGPT", value=eval(presets['DEFAULT'][presets['OPTION'] == 'OpenAI'].to_string(index=False)))
         if not on:
@@ -254,7 +258,7 @@ if snowflake:
 
                                     # Iterate over all files matched by the glob pattern using os.walk and fnmatch
                                     for root, dirs, files in os.walk(self.directory_path):
-                                        st.write("Files: ", files)
+                                        st.markdown("**Documents**")
                                         for filename in files:
                                             for pattern in patterns:
                                                 if fnmatch.fnmatch(filename, pattern):
@@ -267,22 +271,27 @@ if snowflake:
                                                         loader = PyPDFLoader(file_path=file_path)
                                                     if file_path.endswith(".txt"):
                                                         loader = TextLoader(file_path=file_path)
+                                                    st.markdown(f"{os.path.basename(file_path)}")
                                                     docs = loader.load()
                                                     documents.extend(docs)
                                     if isinstance(self.urls, str):
                                         self.urls = [self.urls]
-                                    st.write("URLs: ", self.urls)
-                                    for url in self.urls:
-                                        loader = WebBaseLoader(url)
-                                        docs = loader.load()
-                                        documents.extend(docs)
+                                    st.markdown("**Online**")
+                                    if len(self.urls[0]) > 0:
+                                        for url in self.urls:
+                                            st.write(url.strip())
+                                            loader = WebBaseLoader(url)
+                                            docs = loader.load()
+                                            documents.extend(docs)
                                     return documents
 
                             st.session_state.start = time.time()
                             st.session_state.embeddings = SnowflakeEmbeddings(
                                 connection=session.connection, model=MODEL_EMBEDDINGS
                             )
-                            st.session_state.loader = CustomDirectoryLoader(urls=kunde_url, directory_path="../Documents/", glob_pattern="*.docx|*.pdf|*.csv|*.txt")
+                            folder = os.path.abspath(os.path.join(os.getcwd(), '..', st.session_state.option_offline_resources))
+                            urls = st.session_state.kunde_url.split(',')
+                            st.session_state.loader = CustomDirectoryLoader(urls=urls, directory_path=folder, glob_pattern="*.docx|*.pdf|*.csv|*.txt")
 
                             st.session_state.docs = st.session_state.loader.load()
 
@@ -325,7 +334,7 @@ if snowflake:
                         st.write(f"{response['answer']} (processed in {int(time.time() - st.session_state.start)} seconds.)")
 
                         # Find the relevant chunks
-                        st.write("Quellen:")
+                        st.markdown("**Quellen**")
                         for i, doc in enumerate(response["context"]):
                             st.write(doc.page_content)
                             st.write("--------------------------------")

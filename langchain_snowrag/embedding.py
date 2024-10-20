@@ -1,11 +1,11 @@
 import logging
-logger = logging.getLogger(__name__)
 from typing import Any, List, Mapping, Optional
 from langchain_core.embeddings import Embeddings
-from pydantic import BaseModel
-#from langchain_core.pydantic_v1 import BaseModel
+from langchain_core.pydantic_v1 import BaseModel
 from snowflake.connector import DictCursor
 from snowflake.connector.connection import SnowflakeConnection
+
+logger = logging.getLogger(__name__)
 
 class SnowflakeEmbeddings(BaseModel, Embeddings):
     """Snowflake runs large language models.
@@ -32,7 +32,8 @@ class SnowflakeEmbeddings(BaseModel, Embeddings):
     connection: SnowflakeConnection = None
     """Connection to Snowflake to use"""
 
-    model: str = "e5-base-v2"
+    #model: str = "e5-base-v2"
+    model: str = "multilingual-e5-large"
     """Model name to use."""
 
     show_progress: bool = False
@@ -64,8 +65,7 @@ class SnowflakeEmbeddings(BaseModel, Embeddings):
             The response as a dictionary.
         """
         to_embed = input.replace("'", "\\'")
-        q = f"SELECT SNOWFLAKE.CORTEX.EMBED_TEXT_768('{self.model}', '{to_embed}') as EMBEDDING"
-
+        q = f"SELECT SNOWFLAKE.CORTEX.EMBED_TEXT_1024('{self.model}', '{to_embed}') as EMBEDDING"
         return self.connection.cursor(DictCursor).execute(q).fetchone()["EMBEDDING"]
 
     def _embed(self, input: List[str]) -> List[List[float]]:

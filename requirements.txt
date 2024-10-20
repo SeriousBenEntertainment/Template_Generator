@@ -12,6 +12,7 @@ openai
 beautifulsoup4
 argparse
 python-docx
+docx2txt
 docx2pdf
 pdf2docx
 pypandoc
@@ -19,6 +20,7 @@ reportlab
 deepl
 pillow
 PyPDF2
+pypdf
 opencv-python-headless
 torch
 torchvision
@@ -45,5 +47,3 @@ minio
 black==24.3.0
 build==1.1.1
 tox==4.8
-pypdf
-docx2txt

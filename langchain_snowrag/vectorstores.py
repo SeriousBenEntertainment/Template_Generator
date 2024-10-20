@@ -1,9 +1,11 @@
 from __future__ import annotations
+import streamlit as st
 import hashlib
 import json
 import logging
 import warnings
 from typing import Any, Iterable, List, Optional, Tuple, Type
+from snowflake.snowpark import Session
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
@@ -11,7 +13,7 @@ from snowflake.connector import DictCursor
 from snowflake.connector.connection import SnowflakeConnection
 from Functions import create_session
 
-VECTOR_LENGTH = 768
+VECTOR_LENGTH = 1024
 logger = logging.getLogger(__name__)
 
 class SnowflakeVectorStore(VectorStore):
@@ -41,7 +43,7 @@ class SnowflakeVectorStore(VectorStore):
     def create_table_if_not_exists(self) -> None:
         self._connection.cursor().execute(
             f"""
-            CREATE TEMPORARY TABLE {self._table}
+            CREATE TABLE IF NOT EXISTS {self._table}
             (
               rowid INTEGER AUTOINCREMENT,
               rowhash VARCHAR,
@@ -80,18 +82,18 @@ class SnowflakeVectorStore(VectorStore):
             for text, metadata, embed in zip(texts, metadatas, embeds)
         ]
         self._connection.cursor().execute("begin")
-        # https://docs.snowflake.com/LIMITEDACCESS/vector-search#snowflake-python-connector
         for row in data_input:
             _hash = hashlib.sha256(row[0].encode("UTF-8")).hexdigest()
             _text = row[0].replace("'", "\\'")
             _metadata = row[1]
             _vec = row[2]
+
             _q = f"""
                 MERGE INTO {self._table} t USING (
                     SELECT
-                        '{_hash}'::VARCHAR as rowhash,
-                        '{_text}'::VARCHAR as text,
-                        PARSE_JSON('{_metadata}') as metadata,
+                        ?::VARCHAR as rowhash,
+                        ?::VARCHAR as text,
+                        PARSE_JSON(?) as metadata,
                         {_vec}::VECTOR(float, {self._vector_length}) as text_embedding
                     ) s
                 ON s.rowhash = t.rowhash
@@ -99,10 +101,10 @@ class SnowflakeVectorStore(VectorStore):
                     INSERT (rowhash, text, metadata, text_embedding)
                     VALUES (s.rowhash, s.text, s.metadata, s.text_embedding);
             """
-            self._connection.cursor().execute(_q)
+            self._connection.cursor().execute(_q, [_hash, _text, _metadata])
         self._connection.cursor().execute("commit")
 
-        # pulling every ids we just inserted
+        # Pulling every ids we just inserted
         results = self._connection.cursor(DictCursor).execute(
             f"SELECT rowid FROM {self._table} WHERE rowid > {max_id}"
         )
@@ -136,7 +138,7 @@ class SnowflakeVectorStore(VectorStore):
         return documents
 
     def similarity_search(
-        self, query: str, k: int = 4, **kwargs: Any
+        self, query: str, k: int = 8, **kwargs: Any
     ) -> List[Document]:
         """Return docs most similar to query."""
         embedding = self._embedding.embed_query(query)
@@ -146,7 +148,7 @@ class SnowflakeVectorStore(VectorStore):
         return [doc for doc, _ in documents]
 
     def similarity_search_with_score(
-        self, query: str, k: int = 4, **kwargs: Any
+        self, query: str, k: int = 8, **kwargs: Any
     ) -> List[Tuple[Document, float]]:
         """Return docs most similar to query."""
 
@@ -157,7 +159,7 @@ class SnowflakeVectorStore(VectorStore):
         return documents
 
     def similarity_search_by_vector(
-        self, embedding: List[float], k: int = 4, **kwargs: Any
+        self, embedding: List[float], k: int = 8, **kwargs: Any
     ) -> List[Document]:
         documents = self.similarity_search_with_score_by_vector(
             embedding=embedding, k=k
