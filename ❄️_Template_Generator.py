@@ -253,9 +253,6 @@ if snowflake:
                                     documents = []
                                     patterns = self.glob_pattern.split('|')
 
-                                    # Construct the full glob pattern
-                                    full_glob_pattern = f"{self.directory_path}{self.glob_pattern}"
-
                                     # Iterate over all files matched by the glob pattern using os.walk and fnmatch
                                     for root, dirs, files in os.walk(self.directory_path):
                                         st.markdown("**Documents**")
