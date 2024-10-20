@@ -311,9 +311,7 @@ if snowflake:
                     llm = Cortex(connection=session.connection, model=MODEL_LLM)
                     prompt = ChatPromptTemplate.from_template(
                         """
-                        Schreibe einen Abschnitt für eine Anzeige beim Bundesamt für Soziale Sicherung.
-                        über die Verwendung von Sozialdaten in der Cloud. 
-                        Denke schrittweise, bevor Du den Abschnitt schreibst.
+                        {system}
                         <context>
                         {context}
                         </context>
@@ -327,10 +325,15 @@ if snowflake:
                     retrieval_chain = create_retrieval_chain(retriever, document_chain)
 
                     # Then pass the prompt to the LLM
-                    input_prompt = st.text_input("Frage an Streamlit-RAG")
-                    if input_prompt:
+                    system = st.text_input("System Message", value="Du bist ein Rechtsanwalt. Denke Schritt um Schritt.")
+                    prompt = st.text_input("Frage")
+                    if prompt:
                         st.session_state.start  = time.time()
-                        response = retrieval_chain.invoke({"input": input_prompt})
+                        input_data = {
+                            "system": system,
+                            "input": prompt
+                        }
+                        response = retrieval_chain.invoke(input_data)
                         st.write(f"{response['answer']} (processed in {int(time.time() - st.session_state.start)} seconds.)")
 
                         # Find the relevant chunks
