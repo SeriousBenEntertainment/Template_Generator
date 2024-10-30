@@ -89,7 +89,7 @@ with sidebar:
             presets = pd.read_csv(StringIO(csv_data), quotechar="'", delimiter=',')
         except S3Error as e:
             st.error(f"Keine Verbindung zu MinIO möglich: {e}")
-    snowflake = st.toggle("Snowflake", True)
+    snowflake = st.toggle("Snowflake", False)
     if snowflake:
         snowflake_rag = st.toggle("Snowflake RAG", False)
         if snowflake_rag:
