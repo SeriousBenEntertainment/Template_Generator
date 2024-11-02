@@ -108,7 +108,7 @@ Install the MinIO Client with
 ```bash
 # MinIO Client
 brew install minio/stable/mc
-mc alias set myminio/ http://127.0.0.1:9000 minioadmin minioadmin
+mc alias set myminio https://127.0.0.1:9000 minioadmin minioadmin --insecure
 
 # Info about the MinIO server
 mc --insecure admin info myminio
