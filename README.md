@@ -114,7 +114,7 @@ mc alias set myminio https://127.0.0.1:9000 minioadmin minioadmin --insecure
 mc --insecure admin info myminio
 
 # Set the policy for a bucket (to downloadable)
-mc anonymous set download myminio/templategenerator
+mc --insecure anonymous set download myminio/templategenerator
 ```
 
 ### Web Interface
