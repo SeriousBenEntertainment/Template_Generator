@@ -1,0 +1,49 @@
+### `requirements.txt`
+### ❄️ Template Generator
+### Open-Source, hosted on https://github.com/SeriousBenEntertainment/Template_Generator
+### Please reach out to ben@seriousbenentertainment.org for any questions
+### Needed Python libraries
+streamlit-scrollable-textbox
+streamlit-cropper
+streamlit-audiorec
+streamlit-pdf-viewer
+watchdog
+openai
+beautifulsoup4
+argparse
+python-docx
+docx2txt
+docx2pdf
+pdf2docx
+pypandoc
+reportlab
+deepl
+pillow
+PyPDF2
+pypdf
+opencv-python-headless
+torch
+torchvision
+torchaudio
+langsmith
+langserve
+langchain-community
+langchain-openai
+diffusers
+bitsandbytes
+transformers
+accelerate
+peft
+trl
+datasets
+audio2numpy
+pydub
+python-engineio==3.13.0
+python-socketio==4.6.0
+text_generation
+tomlkit==0.13.0
+snowflake-cli-labs
+minio
+black==24.3.0
+build==1.1.1
+tox==4.8
